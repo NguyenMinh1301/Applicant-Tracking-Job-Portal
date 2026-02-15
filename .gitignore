@@ -3,6 +3,10 @@ target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+data
+grafana-storage
+.agent/
+qdrant-storage
 
 ### STS ###
 .apt_generated
@@ -31,3 +35,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### .env ###
+*.env
+.env.*
