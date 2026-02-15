@@ -4,8 +4,38 @@
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
     <property name="APP_NAME" value="VietRecruit"/>
+    <springProperty scope="context" name="LOGSTASH_HOST" source="logging.logstash.host" defaultValue="localhost"/>
+
     <property name="LOG_PATH" value="${user.home}/${APP_NAME}/logs"/>
     <property name="LOG_FILE" value="${LOG_PATH}/application.log"/>
+
+    <appender name="LOG_STASH"
+              class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>${LOGSTASH_HOST}:5044</destination>
+
+        <encoder charset="UTF-8"
+                 class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp>
+                    <timeZone>UTC</timeZone>
+                </timestamp>
+
+                <pattern>
+                    <pattern>
+                        {
+                        "mv_date": "%d{yyyy-MM-dd HH:mm:ss.SSS}",
+                        "mv_ip": "111.222.333.444",
+                        "mv_thread": "%thread",
+                        "mv_traceId": "%X{traceId}",
+                        "mv_level": "%level",
+                        "mv_logger": "%logger{40}",
+                        "mv_message": "%msg%n"
+                        }
+                    </pattern>
+                </pattern>
+            </providers>
+        </encoder>
+    </appender>
 
     <appender name="CONSOLE"
               class="ch.qos.logback.core.ConsoleAppender">
@@ -17,39 +47,9 @@
         </encoder>
     </appender>
 
-    <!-- Logstash appender: uncomment when logstash-logback-encoder dep is active in pom.xml -->
-    <!--
-    <springProfile name="prod">
-        <appender name="LOG_STASH"
-                  class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-            <destination>${LOGSTASH_HOST:-localhost}:5044</destination>
-            <encoder charset="UTF-8"
-                     class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
-                <providers>
-                    <timestamp>
-                        <timeZone>UTC</timeZone>
-                    </timestamp>
-                    <pattern>
-                        <pattern>
-                            {
-                            "vr_date": "%d{yyyy-MM-dd HH:mm:ss.SSS}",
-                            "vr_thread": "%thread",
-                            "vr_traceId": "%X{traceId}",
-                            "vr_level": "%level",
-                            "vr_logger": "%logger{40}",
-                            "vr_message": "%msg%n"
-                            }
-                        </pattern>
-                    </pattern>
-                </providers>
-            </encoder>
-        </appender>
-    </springProfile>
-    -->
-
     <root level="INFO">
+        <appender-ref ref="LOG_STASH"/>
         <appender-ref ref="CONSOLE"/>
-        <!-- <appender-ref ref="LOG_STASH"/> -->
     </root>
 
 </configuration>

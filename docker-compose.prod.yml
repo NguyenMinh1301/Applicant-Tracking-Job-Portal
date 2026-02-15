@@ -129,8 +129,8 @@ services:
     image: debezium/connect:2.5
     container_name: vr-debezium-connect
     ports:
-      - "8083:8083"
-      - "8778:8778"
+      - "127.0.0.1:8083:8083"
+      - "127.0.0.1:8778:8778"
     networks:
       - vr-network
     environment:
@@ -166,8 +166,9 @@ services:
   debezium-ui:
     image: debezium/debezium-ui:2.5
     container_name: vr-debezium-ui
+    hostname: debezium-ui
     ports:
-      - "8084:8080"
+      - "127.0.0.1:8085:8080"
     networks:
       - vr-network
     environment:
@@ -175,13 +176,34 @@ services:
     depends_on:
       - debezium-kafka-connect
 
+  init-kafka-connect:
+    build:
+      context: ./debezium
+    image: vr-init-connector:latest
+    container_name: vr-init-kafka-connect
+    networks:
+      - vr-network
+    environment:
+      KAFKA_CONNECT_URL: http://vr-debezium-connect:8083
+      CONNECTOR_CONFIG: /config/connector-postgres.json
+      MAX_RETRIES: 60
+      RETRY_INTERVAL: 5
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: vietrecruit
+
+    depends_on:
+      debezium-kafka-connect:
+        condition: service_healthy
+    restart: "no"
+
   prometheus:
     image: prom/prometheus:latest
     container_name: vr-prometheus
     user: root
     restart: unless-stopped
     volumes:
-      - ./monitor/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitor/prometheus.prod.yml:/etc/prometheus/prometheus.yml
       - ./data/prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -311,9 +333,42 @@ services:
     depends_on:
       - elasticsearch
 
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: vr-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    networks:
+      - vr-network
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: vr-kafka-exporter
+    command:
+      - --kafka.server=vr-kafka:9092
+    ports:
+      - "9308:9308"
+    networks:
+      - vr-network
+    restart: on-failure
+
+  elasticsearch-exporter:
+    image: quay.io/prometheuscommunity/elasticsearch-exporter:latest
+    container_name: vr-elasticsearch-exporter
+    command:
+      - --es.uri=http://vr-elasticsearch:9200
+    ports:
+      - "9114:9114"
+    networks:
+      - vr-network
+
 volumes:
   db:
   kafka_data:
+  qdrant_data:
 
 
 networks:

@@ -1,0 +1,102 @@
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: vr-prometheus
+    user: root
+    restart: unless-stopped
+    volumes:
+      - ../../monitor/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ../../data/prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - "9091:9090"
+    networks:
+      - vr-network
+
+  grafana:
+    image: grafana/grafana
+    container_name: vr-grafana
+    user: root
+    hostname: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SING_UP=false
+      - GF_SERVER_DOMAIN=localhost
+      - GF_LOG_MODE=console file
+    volumes:
+      - ../../grafana-storage:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - vr-network
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: vr-node-exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.rootfs=/rootfs
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    ports:
+      - "9100:9100"
+    networks:
+      - vr-network
+
+  redis-exporter:
+    image: oliver006/redis_exporter
+    container_name: vr-redis-exporter
+    command: -redis.addr redis://:${REDIS_PASSWORD}@vr-redis:6379
+    ports:
+      - "9121:9121"
+    networks:
+      - vr-network
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter
+    container_name: vr-postgres-exporter
+    environment:
+      DATA_SOURCE_URI: "vr-postgres:5432/vietrecruit?sslmode=disable"
+      DATA_SOURCE_USER: ${POSTGRES_USER}
+      DATA_SOURCE_PASS: ${POSTGRES_PASSWORD}
+    networks:
+      - vr-network
+    ports:
+      - "9187:9187"
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: vr-kafka-exporter
+    command:
+      - --kafka.server=vr-kafka:9092
+    ports:
+      - "9308:9308"
+    networks:
+      - vr-network
+    restart: on-failure
+
+  elasticsearch-exporter:
+    image: quay.io/prometheuscommunity/elasticsearch-exporter:latest
+    container_name: vr-elasticsearch-exporter
+    command:
+      - --es.uri=http://vr-elasticsearch:9200
+    ports:
+      - "9114:9114"
+    networks:
+      - vr-network
+
+networks:
+  vr-network:
+    driver: bridge

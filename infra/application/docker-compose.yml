@@ -1,0 +1,176 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: vr-kafka
+    ports:
+      - "29092:29092"
+    networks:
+      - vr-network
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@vr-kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://vr-kafka:9092,CONTROLLER://vr-kafka:9093,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://vr-kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: 'VlJDbHVzdGVySWQxMjM0NQ'
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:29092 || exit 1" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  kafka-ui:
+    container_name: vr-kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8090:8080
+    networks:
+      - vr-network
+    environment:
+      DYNAMIC_CONFIG_ENABLED: "true"
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: vr-kafka:9092
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: debezium
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://vr-debezium-connect:8083
+    depends_on:
+      - kafka
+      - debezium-kafka-connect
+
+  debezium-kafka-connect:
+    image: debezium/connect:2.5
+    container_name: vr-debezium-connect
+    ports:
+      - "8083:8083"
+      - "8778:8778"
+    networks:
+      - vr-network
+    environment:
+      BOOTSTRAP_SERVERS: vr-kafka:9092
+      GROUP_ID: debezium-connect
+      CONFIG_STORAGE_TOPIC: debezium_connect_configs
+      OFFSET_STORAGE_TOPIC: debezium_connect_offsets
+      STATUS_STORAGE_TOPIC: debezium_connect_statuses
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      ENABLE_JOLOKIA: "true"
+    depends_on:
+      - kafka
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8083/connectors || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  debezium-ui:
+    image: debezium/debezium-ui:2.5
+    container_name: vr-debezium-ui
+    ports:
+      - "8084:8080"
+    networks:
+      - vr-network
+    environment:
+      KAFKA_CONNECT_URIS: http://vr-debezium-connect:8083
+    depends_on:
+      - debezium-kafka-connect
+
+  init-kafka-connect:
+    build:
+      context: ../../debezium
+    image: vr-init-connector:latest
+    container_name: vr-init-kafka-connect
+    networks:
+      - vr-network
+    environment:
+      KAFKA_CONNECT_URL: http://vr-debezium-connect:8083
+      CONNECTOR_CONFIG: /config/connector-postgres.json
+      MAX_RETRIES: 60
+      RETRY_INTERVAL: 5
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: vietrecruit
+    depends_on:
+      debezium-kafka-connect:
+        condition: service_healthy
+    restart: "no"
+
+  elasticsearch:
+    image: elasticsearch:7.17.25
+    container_name: vr-elasticsearch
+    volumes:
+      - ../../elk/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - ES_JAVA_OPTS=-Xmx1g -Xms1g
+      - discovery.type=single-node
+    networks:
+      - vr-network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  logstash:
+    image: logstash:7.17.25
+    container_name: vr-logstash
+    volumes:
+      - ../../elk/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ../../elk/pipeline:/usr/share/logstash/pipeline
+    ports:
+      - "5044:5044"
+      - "5033:5000/tcp"
+      - "5022:5000/udp"
+      - "9600:9600"
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    networks:
+      - vr-network
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: kibana:7.17.25
+    container_name: vr-kibana
+    volumes:
+      - ../../elk/kibana.yml:/usr/share/kibana/config/kibana.yml
+    ports:
+      - "5601:5601"
+    networks:
+      - vr-network
+    depends_on:
+      - elasticsearch
+
+volumes:
+  kafka_data:
+
+
+networks:
+  vr-network:
+    driver: bridge
