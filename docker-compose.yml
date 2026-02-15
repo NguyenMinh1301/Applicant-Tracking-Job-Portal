@@ -130,6 +130,27 @@ services:
     depends_on:
       - debezium-kafka-connect
 
+  init-kafka-connect:
+    build:
+      context: ./debezium
+    image: vr-init-connector:latest
+    container_name: vr-init-kafka-connect
+    networks:
+      - vr-network
+    environment:
+      KAFKA_CONNECT_URL: http://vr-debezium-connect:8083
+      CONNECTOR_CONFIG: /config/connector-postgres.json
+      MAX_RETRIES: 60
+      RETRY_INTERVAL: 5
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: vietrecruit
+
+    depends_on:
+      debezium-kafka-connect:
+        condition: service_healthy
+    restart: "no"
+
   prometheus:
     image: prom/prometheus:latest
     container_name: vr-prometheus

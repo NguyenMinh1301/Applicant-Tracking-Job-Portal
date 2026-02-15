@@ -129,8 +129,8 @@ services:
     image: debezium/connect:2.5
     container_name: vr-debezium-connect
     ports:
-      - "8083:8083"
-      - "8778:8778"
+      - "127.0.0.1:8083:8083"
+      - "127.0.0.1:8778:8778"
     networks:
       - vr-network
     environment:
@@ -166,14 +166,36 @@ services:
   debezium-ui:
     image: debezium/debezium-ui:2.5
     container_name: vr-debezium-ui
+    hostname: debezium-ui
     ports:
-      - "8084:8080"
+      - "127.0.0.1:8085:8080"
     networks:
       - vr-network
     environment:
       KAFKA_CONNECT_URIS: http://vr-debezium-connect:8083
     depends_on:
       - debezium-kafka-connect
+
+  init-kafka-connect:
+    build:
+      context: ./debezium
+    image: vr-init-connector:latest
+    container_name: vr-init-kafka-connect
+    networks:
+      - vr-network
+    environment:
+      KAFKA_CONNECT_URL: http://vr-debezium-connect:8083
+      CONNECTOR_CONFIG: /config/connector-postgres.json
+      MAX_RETRIES: 60
+      RETRY_INTERVAL: 5
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: vietrecruit
+
+    depends_on:
+      debezium-kafka-connect:
+        condition: service_healthy
+    restart: "no"
 
   prometheus:
     image: prom/prometheus:latest
