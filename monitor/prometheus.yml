@@ -30,3 +30,21 @@ scrape_configs:
     static_configs:
       - targets: [ "vr-postgres-exporter:9187" ]
     metrics_path: "/metrics"
+
+  - job_name: "vr-kafka-exporter"
+    scrape_interval: 15s
+    static_configs:
+      - targets: [ "vr-kafka-exporter:9308" ]
+    metrics_path: "/metrics"
+
+  - job_name: "vr-elasticsearch-exporter"
+    scrape_interval: 15s
+    static_configs:
+      - targets: [ "vr-elasticsearch-exporter:9114" ]
+    metrics_path: "/metrics"
+
+  - job_name: "vr-qdrant"
+    scrape_interval: 15s
+    static_configs:
+      - targets: [ "vr-qdrant:6333" ]
+    metrics_path: "/metrics"
