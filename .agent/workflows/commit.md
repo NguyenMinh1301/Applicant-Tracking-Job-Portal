@@ -12,7 +12,7 @@ $ARGUMENTS
 
 1. **NO PUSH EXECUTION** - This mode strictly structures and outputs commit commands. User executes them manually.
 2. **Historical Alignment** - Read the last 20 commits to extract and mimic repository formatting conventions.
-3. **Atomic Grouping** - Strictly isolate changes. Maximum 1 to 4 files per commit. No monolithic commits.
+3. **Atomic Grouping** - Strictly isolate changes. Maximum 2 to 8 files per commit. No monolithic commits.
 4. **Standardization** - Apply Conventional Commits (feat:, fix:, refactor:, etc.) if historical alignment is inconclusive.
 
 ---
