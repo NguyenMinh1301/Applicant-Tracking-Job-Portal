@@ -1,0 +1,47 @@
+name: VietRecruit Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - release
+  pull_request:
+    branches:
+      - main
+      - release
+
+env:
+  APP_NAME: VietRecruit
+
+jobs:
+  tests:
+    env:
+      TZ: Asia/Ho_Chi_Minh
+    runs-on: ubuntu-24.04
+    name: Tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'corretto'
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{hashFiles('**/pom.xml')}}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Make mvnw executable
+        run: |
+          chmod +x mvnw
+
+      - name: Running Unit Tests
+        run: |
+          ./mvnw clean test
