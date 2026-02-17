@@ -6,11 +6,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class Application {
 
-	public static void main(String[] args) {
+    public static void main(String[] args) {
 
-		System.setProperty("user.timezone", "Asia/Ho_Chi_Minh");
+        System.setProperty("user.timezone", "Asia/Ho_Chi_Minh");
 
-		SpringApplication.run(Application.class, args);
-	}
-
+        SpringApplication.run(Application.class, args);
+    }
 }
