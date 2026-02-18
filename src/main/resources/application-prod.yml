@@ -2,7 +2,10 @@ debug: false
 
 spring:
   config:
-    import: classpath:resilience/resilience4j-prod.yml
+    import:
+      - classpath:resilience/circuitbreaker/resilience4j-prod.yml
+      - classpath:resilience/ratelimiter/resilience4j-prod.yml
+      - classpath:resilience/retry/resilience4j-prod.yml
 
 jpa:
   hibernate:

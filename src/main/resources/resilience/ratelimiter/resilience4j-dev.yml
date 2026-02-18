@@ -1,25 +1,8 @@
 resilience4j:
-  circuitbreaker:
-    instances:
-      default:
-        slidingWindowSize: 10
-        minimumNumberOfCalls: 5
-        waitDurationInOpenState: 10s
-        failureRateThreshold: 50
-        permittedNumberOfCallsInHalfOpenState: 3
-        eventConsumerBufferSize: 10
-        registerHealthIndicator: true
-
-  retry:
-    instances:
-      default:
-        maxAttempts: 3
-        waitDuration: 1s
-        exponentialBackoffMultiplier: 2
-        enableExponentialBackoff: true
 
   ratelimiter:
     instances:
+      # Auth
       authStrict:
         limitForPeriod: 20
         limitRefreshPeriod: 60s
@@ -31,12 +14,14 @@ resilience4j:
         timeoutDuration: 5s
         registerHealthIndicator: true
 
+      # OpenAPI
       swagger:
         limitForPeriod: 100
         limitRefreshPeriod: 60s
         timeoutDuration: 5s
         registerHealthIndicator: true
 
+      # Base
       lowTraffic:
         limitForPeriod: 10
         limitRefreshPeriod: 30s

@@ -7,8 +7,7 @@ import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Filters out Kafka tombstone records (null values) to prevent NPE. Tombstones
- * are emitted by
+ * Filters out Kafka tombstone records (null values) to prevent NPE. Tombstones are emitted by
  * Debezium after DELETE for log compaction.
  */
 @Component

@@ -23,21 +23,17 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
 /**
  * Kafka configuration with retry and Dead Letter Queue (DLQ) support.
  *
- * <p>
- * Features:
+ * <p>Features:
  *
  * <ul>
- * <li>JSON serialization for messages
- * <li>Retry mechanism configured via @RetryableTopic on consumers
- * <li>Dead Letter Topic for failed messages after retries exhausted
- * <li>CDC consumer factory with tombstone filtering for Debezium
+ *   <li>JSON serialization for messages
+ *   <li>Retry mechanism configured via @RetryableTopic on consumers
+ *   <li>Dead Letter Topic for failed messages after retries exhausted
+ *   <li>CDC consumer factory with tombstone filtering for Debezium
  * </ul>
  *
- * <p>
- * Note: Retry configuration is handled by @RetryableTopic annotation on
- * individual consumers
- * (e.g., EmailConsumer) rather than a global RetryTopicConfiguration bean to
- * avoid conflicts.
+ * <p>Note: Retry configuration is handled by @RetryableTopic annotation on individual consumers
+ * (e.g., EmailConsumer) rather than a global RetryTopicConfiguration bean to avoid conflicts.
  */
 @Configuration
 @EnableKafka
@@ -81,7 +77,8 @@ public class KafkaConfig {
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         return factory;
     }
@@ -104,7 +101,8 @@ public class KafkaConfig {
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, String> cdcKafkaListenerContainerFactory(
             CdcRecordFilter cdcRecordFilter) {
-        ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        ConcurrentKafkaListenerContainerFactory<String, String> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(cdcConsumerFactory());
         // Filter out tombstone records (null values)
         factory.setRecordFilterStrategy(cdcRecordFilter);

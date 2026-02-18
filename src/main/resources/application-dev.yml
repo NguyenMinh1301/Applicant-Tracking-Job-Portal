@@ -1,6 +1,9 @@
 spring:
   config:
-    import: classpath:resilience/resilience4j-dev.yml
+    import:
+      - classpath:resilience/circuitbreaker/resilience4j-dev.yml
+      - classpath:resilience/ratelimiter/resilience4j-dev.yml
+      - classpath:resilience/retry/resilience4j-dev.yml
 
 jpa:
   hibernate:

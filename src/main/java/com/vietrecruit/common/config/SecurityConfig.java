@@ -13,12 +13,18 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/**", "/actuator/prometheus", "/health/**").permitAll()
-                        .anyRequest().permitAll() // Temporary: Allow all for dev to match previous behavior
-                );
+        http.csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(
+                        auth ->
+                                auth.requestMatchers(
+                                                "/actuator/**",
+                                                "/actuator/prometheus",
+                                                "/health/**")
+                                        .permitAll()
+                                        .anyRequest()
+                                        .permitAll() // Temporary: Allow all for dev to match
+                        // previous behavior
+                        );
         return http.build();
     }
 }
