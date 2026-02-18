@@ -57,6 +57,29 @@ Next steps:
 ```
 
 ---
+# Example
+
+```
+<scope>(<file, task name or module changes>): <details>
+```
+Example commit:
+- feat(user): implement user service logic
+- chore(logo): update project logo
+- infra(monitor): update prometheus targets and fix logstash connectivity
+
+Note Conventional Commits specification:
+* `feat` A new feature.
+* `fix` A bug fix.
+* `refactor` A code change that neither fixes a bug nor adds a feature.
+* `perf` A code change that improves performance.
+* `test` Adding missing tests or correcting existing tests.
+* `chore` Changes to the build process or auxiliary tools and libraries.
+* `infra` Update project infrastructure (change Dockerfile, DockerCompose, move folder, or affect the code flow/logic).
+* `style` Edit something without affecting the code structure or workflow. Adjust file and code locations.
+
+---
+
+---
 
 ## Usage
 
