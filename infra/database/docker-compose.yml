@@ -40,20 +40,8 @@ services:
       timeout: 5s
       retries: 5
 
-  qdrant:
-    image: qdrant/qdrant:latest
-    container_name: vr-qdrant
-    ports:
-      - "6333:6333"
-      - "6334:6334"
-    networks:
-      - vr-network
-    volumes:
-      - qdrant_data:/qdrant/storage
-
 volumes:
   db:
-  qdrant_data:
 
 
 networks:

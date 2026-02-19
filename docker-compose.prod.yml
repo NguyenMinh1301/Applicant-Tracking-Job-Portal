@@ -333,17 +333,6 @@ services:
     depends_on:
       - elasticsearch
 
-  qdrant:
-    image: qdrant/qdrant:latest
-    container_name: vr-qdrant
-    ports:
-      - "6333:6333"
-      - "6334:6334"
-    networks:
-      - vr-network
-    volumes:
-      - qdrant_data:/qdrant/storage
-
   kafka-exporter:
     image: danielqsj/kafka-exporter:latest
     container_name: vr-kafka-exporter
@@ -368,7 +357,6 @@ services:
 volumes:
   db:
   kafka_data:
-  qdrant_data:
 
 
 networks:

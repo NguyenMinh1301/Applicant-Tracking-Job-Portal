@@ -34,11 +34,10 @@ spring:
       embedding:
         model: ${OPENAI_EMBEDDING_MODEL}
     vectorstore:
-      qdrant:
-        host: ${QDRANT_HOST}
-        port: ${QDRANT_PORT}
-        collection-name: ${QDRANT_COLLECTION}
-        use-tls: false
+      pgvector:
+        index-type: hnsw
+        distance-type: cosine_distance
+        dimensions: 1536
   mail:
     host: smtp.gmail.com
     port: 587

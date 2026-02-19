@@ -16,7 +16,7 @@ description: Core execution rules and constraints for all AI agents operating wi
 Agent activated → Check frontmatter "skills:" → Read SKILL.md (INDEX) → Read specific sections.
 
 - **Selective Reading:** DO NOT read ALL files in a skill folder. Read `SKILL.md` first, then only read sections matching the user's request.
-- **Rule Priority:** P0 (GEMINI.md) > P1 (Agent .md) > P2 (SKILL.md). All rules are binding.
+- **Rule Priority:** P0 (GEMINI.md) > P1 (STRUCT.md) > P2 (BASE.md). All rules are binding.
 
 # RULES.md - AI Execution Protocol
 
@@ -125,9 +125,11 @@ When preparing changes for snapshot (`/commit`), the AI must enforce structured 
 
 All commit messages MUST follow the Conventional Commits specification:
 
-* `feat:` A new feature.
-* `fix:` A bug fix.
-* `refactor:` A code change that neither fixes a bug nor adds a feature.
-* `perf:` A code change that improves performance.
-* `test:` Adding missing tests or correcting existing tests.
-* `chore:` Changes to the build process or auxiliary tools and libraries.
+* `feat` A new feature.
+* `fix` A bug fix.
+* `refactor` A code change that neither fixes a bug nor adds a feature.
+* `perf` A code change that improves performance.
+* `test` Adding missing tests or correcting existing tests.
+* `chore` Changes to the build process or auxiliary tools and libraries.
+* `infra` Update project infrastructure (change Dockerfile, DockerCompose, move folder, or affect the code flow/logic).
+* `style` Edit something without affecting the code structure or workflow. Adjust file and code locations.

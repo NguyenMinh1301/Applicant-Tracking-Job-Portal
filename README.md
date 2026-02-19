@@ -1,7 +1,6 @@
 <p align="center">
     <a href="https://spring.io/" target="_blank"><img src="assets/img/springio.svg" height="90" alt="Spring Boot" /></a>&nbsp;
     <a href="https://www.postgresql.org/" target="_blank"><img src="assets/img/postgresql.svg" height="90" alt="PostgreSQL" /></a>&nbsp;
-    <a href="https://qdrant.tech/" target="_blank"><img src="assets/img/qdrant.svg" height="90" alt="Qdrant" /></a>&nbsp;
     <a href="https://redis.io/" target="_blank"><img src="assets/img/redis.svg" height="90" alt="Redis" /></a>&nbsp;
     <a href="https://www.elastic.co/" target="_blank"><img src="assets/img/elastic.svg" height="90" alt="Elasticsearch" /></a>&nbsp;
     <br/>
