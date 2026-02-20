@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/testdb
+    username: test
+    password: test
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092
+  elasticsearch:
+    uris: http://localhost:9200
+  ai:
+    openai:
+      api-key: test-key
