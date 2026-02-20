@@ -1,9 +1,5 @@
 ---
 trigger: always_on
----
-
----
-trigger: always_on
 description: Core execution rules and constraints for all AI agents operating within this workspace.
 ---
 
@@ -11,11 +7,16 @@ description: Core execution rules and constraints for all AI agents operating wi
 
 > **MANDATORY:** You MUST read the appropriate agent file and its skills BEFORE performing any implementation. This is the highest priority rule.
 
-### 1. Modular Skill Loading Protocol
+### 1. Direct Smart Agent Protocol (Query -> Index -> Skill)
 
-Agent activated → Check frontmatter "skills:" → Read SKILL.md (INDEX) → Read specific sections.
+To optimize token usage and ensure precise context loading, follow this STRICT protocol for every user request:
 
-- **Selective Reading:** DO NOT read ALL files in a skill folder. Read `SKILL.md` first, then only read sections matching the user's request.
+1.  **Analyze Query**: Determine the core intent (e.g., "Designing an API" -> API Patterns).
+2.  **Consult Index**: Read **`.agent/skills/SKILLS.md`** first. This file acts as the master index.
+3.  **Select Skill**: Identify the specific skill directory from the index that matches the request.
+4.  **Load Context**: Read the `SKILL.md` (or equivalent) file WITHIN that specific skill directory.
+    *   **Constraint:** DO NOT read the entire skill directory. Only read the targeted documentation.
+
 - **Rule Priority:** P0 (GEMINI.md) > P1 (STRUCT.md) > P2 (BASE.md). All rules are binding.
 
 # RULES.md - AI Execution Protocol
@@ -111,25 +112,3 @@ Before suggesting any code patch, the AI MUST provide an RCA detailing:
 * **Contextual Awareness:** The AI must consider the broader system state (e.g., database locks, network latency) if the error implies environmental issues.
 
 ---
-
-## TIER 4: VERSION CONTROL PROTOCOL
-
-When preparing changes for snapshot (`/commit`), the AI must enforce structured history.
-
-### 1. Atomic Commits
-
-* **Strict Limit:** Commits must be broken down into atomic, logical units. A maximum of 1 to 4 files per commit is allowed.
-* **Single Purpose:** Each commit must solve one specific problem or add one specific feature.
-
-### 2. Conventional Commits Standard
-
-All commit messages MUST follow the Conventional Commits specification:
-
-* `feat` A new feature.
-* `fix` A bug fix.
-* `refactor` A code change that neither fixes a bug nor adds a feature.
-* `perf` A code change that improves performance.
-* `test` Adding missing tests or correcting existing tests.
-* `chore` Changes to the build process or auxiliary tools and libraries.
-* `infra` Update project infrastructure (change Dockerfile, DockerCompose, move folder, or affect the code flow/logic).
-* `style` Edit something without affecting the code structure or workflow. Adjust file and code locations.
