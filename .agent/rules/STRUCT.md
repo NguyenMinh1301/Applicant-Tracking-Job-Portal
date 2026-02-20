@@ -1,3 +1,8 @@
+---
+trigger: model_decision
+description: I only turn it on when I'm active or working on a VietRecruit or VietRecruit-BE project.
+---
+
 # Project Structure and Architecture
 
 This document provides an overview of the `VietRecruit` project structure, key components, and architectural patterns.
