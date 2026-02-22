@@ -1,4 +1,7 @@
 include:
   - path: infra/database/docker-compose.yml
+
   - path: infra/application/docker-compose.yml
-  - path: infra/monitoring/docker-compose.yml
+
+  # Only comment this line while you are in development
+  # - path: infra/monitoring/docker-compose.yml
