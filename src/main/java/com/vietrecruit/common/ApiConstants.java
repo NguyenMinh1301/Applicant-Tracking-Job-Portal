@@ -7,7 +7,13 @@ public final class ApiConstants {
 
     public static final class Auth {
         private Auth() {}
-        // Placeholder for future Auth constants
+
+        public static final String ROOT = API_VERSION + "/auth";
+        public static final String LOGIN = "/login";
+        public static final String REGISTER = "/register";
+        public static final String REFRESH = "/refresh";
+        public static final String LOGOUT = "/logout";
+        public static final String FORGOT_PASSWORD = "/forgot-password";
     }
 
     public static final class User {
