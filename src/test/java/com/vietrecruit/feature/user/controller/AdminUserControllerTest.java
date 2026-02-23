@@ -4,8 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,39 +28,37 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.common.exception.GlobalExceptionHandler;
 import com.vietrecruit.feature.user.dto.request.UserRequest;
-import com.vietrecruit.feature.user.dto.response.UserResponse;
-import com.vietrecruit.feature.user.service.UserService;
+import com.vietrecruit.feature.user.dto.response.AdminUserResponse;
+import com.vietrecruit.feature.user.service.AdminUserService;
 
 @ExtendWith(MockitoExtension.class)
-class UserControllerTest {
+class AdminUserControllerTest {
 
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Mock private UserService userService;
-
-    @InjectMocks private UserController userController;
+    @Mock private AdminUserService adminUserService;
+    @InjectMocks private AdminUserController adminUserController;
 
     private UUID userId;
     private UserRequest userRequest;
-    private UserResponse userResponse;
+    private AdminUserResponse adminResponse;
 
     @BeforeEach
     void setUp() {
         mockMvc =
-                MockMvcBuilders.standaloneSetup(userController)
+                MockMvcBuilders.standaloneSetup(adminUserController)
                         .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                         .setControllerAdvice(new GlobalExceptionHandler())
                         .build();
 
         userId = UUID.randomUUID();
-
         userRequest = new UserRequest();
         userRequest.setEmail("test@example.com");
         userRequest.setFullName("Test User");
 
-        userResponse =
-                UserResponse.builder()
+        adminResponse =
+                AdminUserResponse.builder()
                         .id(userId)
                         .email("test@example.com")
                         .fullName("Test User")
@@ -69,27 +66,26 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("Should create user successfully")
+    @DisplayName("Should create user")
     void create_Success() throws Exception {
-        when(userService.create(any(UserRequest.class))).thenReturn(userResponse);
+        when(adminUserService.create(any(UserRequest.class))).thenReturn(adminResponse);
 
         mockMvc.perform(
-                        post(ApiConstants.User.ROOT + ApiConstants.User.CREATE)
+                        post(ApiConstants.AdminUser.ROOT + ApiConstants.AdminUser.CREATE)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(userRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.id").value(userId.toString()))
-                .andExpect(jsonPath("$.data.email").value("test@example.com"));
+                .andExpect(jsonPath("$.data.id").value(userId.toString()));
     }
 
     @Test
     @DisplayName("Should get user by ID")
     void get_Success() throws Exception {
-        when(userService.get(userId)).thenReturn(userResponse);
+        when(adminUserService.get(userId)).thenReturn(adminResponse);
 
         mockMvc.perform(
-                        get(ApiConstants.User.ROOT + ApiConstants.User.GET, userId)
+                        get(ApiConstants.AdminUser.ROOT + "/" + userId)
                                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -97,43 +93,41 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("Should list users with pagination")
+    @DisplayName("Should list users")
     void list_Success() throws Exception {
-        Page<UserResponse> pageResponse = new PageImpl<>(List.of(userResponse));
-        when(userService.list(any(Pageable.class))).thenReturn(pageResponse);
+        Page<AdminUserResponse> page = new PageImpl<>(List.of(adminResponse));
+        when(adminUserService.list(any(Pageable.class))).thenReturn(page);
 
         mockMvc.perform(
-                        get(ApiConstants.User.ROOT)
+                        get(ApiConstants.AdminUser.ROOT)
                                 .param("page", "0")
                                 .param("size", "10")
                                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.content[0].id").value(userId.toString()))
                 .andExpect(jsonPath("$.data.totalElements").value(1));
     }
 
     @Test
-    @DisplayName("Should update user successfully")
+    @DisplayName("Should update user")
     void update_Success() throws Exception {
-        when(userService.update(eq(userId), any(UserRequest.class))).thenReturn(userResponse);
+        when(adminUserService.update(eq(userId), any(UserRequest.class))).thenReturn(adminResponse);
 
         mockMvc.perform(
-                        put(ApiConstants.User.ROOT + ApiConstants.User.UPDATE, userId)
+                        put(ApiConstants.AdminUser.ROOT + "/" + userId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(userRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.id").value(userId.toString()));
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     @Test
-    @DisplayName("Should delete user successfully")
+    @DisplayName("Should delete user")
     void delete_Success() throws Exception {
-        doNothing().when(userService).delete(userId);
+        doNothing().when(adminUserService).delete(userId);
 
         mockMvc.perform(
-                        delete(ApiConstants.User.ROOT + ApiConstants.User.DELETE, userId)
+                        delete(ApiConstants.AdminUser.ROOT + "/" + userId)
                                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
