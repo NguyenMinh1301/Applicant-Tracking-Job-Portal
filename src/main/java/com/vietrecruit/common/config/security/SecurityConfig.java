@@ -1,4 +1,4 @@
-package com.vietrecruit.common.config;
+package com.vietrecruit.common.config.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +26,22 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    private static final String[] publicAuthEndpoints = {
+        "/vietrecruit/auth/login",
+        "/vietrecruit/auth/register",
+        "/vietrecruit/auth/refresh",
+        "/vietrecruit/auth/forgot-password"
+    };
+
+    private static final String[] publicOtherEndpoints = {
+        "/v3/api-docs/**",
+        "/swagger-ui.html",
+        "/swagger-ui/**",
+        "/actuator/**",
+        "/actuator/prometheus",
+        "/health/**"
+    };
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
@@ -33,14 +49,9 @@ public class SecurityConfig {
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(
                         auth ->
-                                auth.requestMatchers(
-                                                "/vietrecruit/auth/**",
-                                                "/actuator/**",
-                                                "/actuator/prometheus",
-                                                "/health/**",
-                                                "/swagger-ui/**",
-                                                "/swagger-ui.html",
-                                                "/v3/api-docs/**")
+                                auth.requestMatchers(publicAuthEndpoints)
+                                        .permitAll()
+                                        .requestMatchers(publicOtherEndpoints)
                                         .permitAll()
                                         .anyRequest()
                                         .authenticated())
