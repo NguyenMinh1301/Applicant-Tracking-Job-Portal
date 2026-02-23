@@ -42,6 +42,9 @@ public class SecurityConfig {
         "/health/**"
     };
 
+    private static final String[] clientEndpoints = {"/vietrecruit/client/**"};
+    private static final String[] adminEndpoints = {"/vietrecruit/admin/**"};
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
@@ -53,6 +56,10 @@ public class SecurityConfig {
                                         .permitAll()
                                         .requestMatchers(publicOtherEndpoints)
                                         .permitAll()
+                                        .requestMatchers(clientEndpoints)
+                                        .authenticated()
+                                        .requestMatchers(adminEndpoints)
+                                        .hasAnyAuthority("SYSTEM_ADMIN", "COMPANY_ADMIN")
                                         .anyRequest()
                                         .authenticated())
                 .addFilterBefore(
