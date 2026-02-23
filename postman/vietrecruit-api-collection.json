@@ -174,7 +174,71 @@
 			]
 		},
 		{
-			"name": "User",
+			"name": "Client User",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/client/users/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"client",
+								"users",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Updated Client User\",\n    \"phone\": \"0912345678\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/client/users/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"client",
+								"users",
+								"me"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin User",
 			"item": [
 				{
 					"name": "Create User",
@@ -189,7 +253,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"newuser@example.com\",\n    \"fullName\": \"New User\",\n    \"phone\": \"0987654321\"\n}",
+							"raw": "{\n    \"email\": \"newadminuser@example.com\",\n    \"fullName\": \"New User\",\n    \"phone\": \"0987654321\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -197,13 +261,13 @@
 							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/users/create",
+							"raw": "{{baseUrl}}/admin/users",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
-								"users",
-								"create"
+								"admin",
+								"users"
 							]
 						}
 					},
@@ -221,11 +285,12 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/users/{{userId}}",
+							"raw": "{{baseUrl}}/admin/users/{{userId}}",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
+								"admin",
 								"users",
 								"{{userId}}"
 							]
@@ -245,11 +310,12 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/users",
+							"raw": "{{baseUrl}}/admin/users",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
+								"admin",
 								"users"
 							]
 						}
@@ -269,7 +335,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"updated@example.com\",\n    \"fullName\": \"Updated User\"\n}",
+							"raw": "{\n    \"email\": \"updatedadmin@example.com\",\n    \"fullName\": \"Updated User\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -277,11 +343,12 @@
 							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/users/{{userId}}",
+							"raw": "{{baseUrl}}/admin/users/{{userId}}",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
+								"admin",
 								"users",
 								"{{userId}}"
 							]
@@ -301,11 +368,12 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/users/{{userId}}",
+							"raw": "{{baseUrl}}/admin/users/{{userId}}",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
+								"admin",
 								"users",
 								"{{userId}}"
 							]
