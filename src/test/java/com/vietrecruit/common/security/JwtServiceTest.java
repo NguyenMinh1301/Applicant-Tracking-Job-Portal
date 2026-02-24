@@ -33,7 +33,7 @@ class JwtServiceTest {
         Set<String> roles = Set.of("CANDIDATE", "USER:MANAGE");
 
         // Act
-        String token = jwtService.generateAccessToken(userId, roles);
+        String token = jwtService.generateAccessToken(userId, roles, true);
 
         // Assert
         assertNotNull(token);
@@ -61,7 +61,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("Should validate token successfully")
     void shouldValidateToken() {
-        String token = jwtService.generateAccessToken(UUID.randomUUID(), Set.of("CANDIDATE"));
+        String token = jwtService.generateAccessToken(UUID.randomUUID(), Set.of("CANDIDATE"), true);
         assertTrue(jwtService.isTokenValid(token));
         assertDoesNotThrow(() -> jwtService.parseAndValidate(token));
     }
@@ -80,7 +80,8 @@ class JwtServiceTest {
         // Create a JWT service with 1ms expiration
         JwtService shortLivedJwtService = new JwtService(secret, 1, refreshTokenExpirationMs);
         String token =
-                shortLivedJwtService.generateAccessToken(UUID.randomUUID(), Set.of("CANDIDATE"));
+                shortLivedJwtService.generateAccessToken(
+                        UUID.randomUUID(), Set.of("CANDIDATE"), true);
 
         // Wait for token to expire
         Thread.sleep(10);
@@ -92,7 +93,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("Should return remaining TTL correctly")
     void shouldReturnRemainingTtl() {
-        String token = jwtService.generateAccessToken(UUID.randomUUID(), Set.of("CANDIDATE"));
+        String token = jwtService.generateAccessToken(UUID.randomUUID(), Set.of("CANDIDATE"), true);
         Claims claims = jwtService.parseAndValidate(token);
 
         long ttl = jwtService.getRemainingTtlMs(claims);
