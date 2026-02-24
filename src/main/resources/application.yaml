@@ -1,6 +1,7 @@
 spring:
   application:
     name: VietRecruit
+    frontend-url: ${FRONTEND_BASE_URL}
   profiles:
     active: dev
   config:
