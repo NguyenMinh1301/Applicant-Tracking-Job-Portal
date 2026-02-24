@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Email</title>
+</head>
+
+<body
+    style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f5f7;">
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f4f5f7;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" cellpadding="0" cellspacing="0"
+                    style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 32px 40px 24px; text-align: center; border-bottom: 1px solid #e8eaed;">
+                            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #29b554;">VietRecruit</h1>
+                        </td>
+                    </tr>
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding: 32px 40px;">
+                            <h2 style="margin: 0 0 16px; font-size: 20px; font-weight: 600; color: #202124;">
+                                Verify Your Email Address</h2>
+                            <p style="margin: 0 0 8px; font-size: 15px; line-height: 1.6; color: #5f6368;">
+                                Hi <span th:text="${fullName}">User</span>,
+                            </p>
+                            <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: #5f6368;">
+                                Please verify your email address to activate your VietRecruit account.
+                                This link will expire in 15 minutes.
+                            </p>
+                            <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                                <tr>
+                                    <td style="border-radius: 6px; background-color: #29b554;">
+                                        <a th:href="${verifyLink}"
+                                            style="display: inline-block; padding: 12px 32px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none;">
+                                            Verify Email
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin: 24px 0 0; font-size: 13px; line-height: 1.6; color: #9aa0a6;">
+                                If you did not create an account, you can safely ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 24px 40px; text-align: center; border-top: 1px solid #e8eaed;">
+                            <p style="margin: 0; font-size: 12px; color: #9aa0a6;">
+                                &copy; 2026 VietRecruit. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

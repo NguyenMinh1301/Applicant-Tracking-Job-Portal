@@ -5,9 +5,11 @@ import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.vietrecruit.common.ApiConstants;
@@ -17,6 +19,7 @@ import com.vietrecruit.common.response.ApiSuccessCode;
 import com.vietrecruit.feature.auth.dto.request.ForgotPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.LoginRequest;
 import com.vietrecruit.feature.auth.dto.request.RegisterRequest;
+import com.vietrecruit.feature.auth.dto.request.ResendVerificationRequest;
 import com.vietrecruit.feature.auth.dto.request.TokenRefreshRequest;
 import com.vietrecruit.feature.auth.dto.response.LoginResponse;
 import com.vietrecruit.feature.auth.dto.response.TokenRefreshResponse;
@@ -73,5 +76,19 @@ public class AuthController extends BaseController {
             @Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request);
         return ResponseEntity.ok(ApiResponse.success(ApiSuccessCode.AUTH_FORGOT_SUCCESS));
+    }
+
+    @GetMapping(ApiConstants.Auth.VERIFY_EMAIL)
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(@RequestParam String token) {
+        authService.verifyEmail(token);
+        return ResponseEntity.ok(ApiResponse.success(ApiSuccessCode.AUTH_VERIFY_SUCCESS));
+    }
+
+    @RateLimiter(name = "authStrict", fallbackMethod = "rateLimit")
+    @PostMapping(ApiConstants.Auth.RESEND_VERIFICATION)
+    public ResponseEntity<ApiResponse<Void>> resendVerification(
+            @Valid @RequestBody ResendVerificationRequest request) {
+        authService.resendVerification(request);
+        return ResponseEntity.ok(ApiResponse.success(ApiSuccessCode.AUTH_VERIFY_RESENT));
     }
 }

@@ -53,4 +53,22 @@ public class AuthCacheService {
         String key = BLACKLIST_KEY_PREFIX + jti;
         return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
+
+    private static final String VERIFY_TOKEN_PREFIX = "verify:token:";
+
+    public void storeVerificationToken(String tokenHash, UUID userId, long ttlSeconds) {
+        String key = VERIFY_TOKEN_PREFIX + tokenHash;
+        redisTemplate.opsForValue().set(key, userId.toString(), ttlSeconds, TimeUnit.SECONDS);
+    }
+
+    public UUID getVerificationToken(String tokenHash) {
+        String key = VERIFY_TOKEN_PREFIX + tokenHash;
+        String value = redisTemplate.opsForValue().get(key);
+        return value != null ? UUID.fromString(value) : null;
+    }
+
+    public void deleteVerificationToken(String tokenHash) {
+        String key = VERIFY_TOKEN_PREFIX + tokenHash;
+        redisTemplate.delete(key);
+    }
 }
