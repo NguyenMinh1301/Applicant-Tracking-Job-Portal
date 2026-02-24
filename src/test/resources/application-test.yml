@@ -19,3 +19,7 @@ jwt:
   secret: test-secret-key-that-is-at-least-64-bytes-long-for-hs512-algorithm-padding
   access-token-expiration: 900000
   refresh-token-expiration: 604800000
+
+resend:
+  api-key: test-resend-key
+  domain: test.vietrecruit.site

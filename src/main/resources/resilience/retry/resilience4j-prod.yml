@@ -6,3 +6,10 @@ resilience4j:
         waitDuration: 2s
         exponentialBackoffMultiplier: 2
         enableExponentialBackoff: true
+      resendApi:
+        maxAttempts: 3
+        waitDuration: 2s
+        exponentialBackoffMultiplier: 2
+        enableExponentialBackoff: true
+        retryExceptions:
+          - java.lang.RuntimeException

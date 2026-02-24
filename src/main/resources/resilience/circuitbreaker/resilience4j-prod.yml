@@ -9,3 +9,11 @@ resilience4j:
         permittedNumberOfCallsInHalfOpenState: 5
         eventConsumerBufferSize: 20
         registerHealthIndicator: true
+      resendApi:
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        waitDurationInOpenState: 30s
+        failureRateThreshold: 50
+        permittedNumberOfCallsInHalfOpenState: 5
+        eventConsumerBufferSize: 20
+        registerHealthIndicator: true
