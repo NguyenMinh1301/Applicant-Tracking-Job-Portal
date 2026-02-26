@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_REPO = "nguyenminh1301/Vietrecruit"
-        DEPLOY_DIR = "/home/per"
+        DEPLOY_DIR = "/opt/vietrecruit"
     }
 
     stages {
@@ -43,24 +43,24 @@ pipeline {
             }
         }
 
-        // stage('Deploy to VPS') {
-        //     steps {
-        //         script {
-        //             echo "Deploying at ${env.DEPLOY_DIR}..."
+        stage('Deploy to VPS') {
+            steps {
+                script {
+                    echo "Deploying at ${env.DEPLOY_DIR}..."
 
-        //             sh """
-        //                 cd /home/per
+                    sh """
+                        cd ${env.DEPLOY_DIR}
 
-        //                 docker compose down -v
+                        docker compose down -v
 
-        //                 docker rmi ${DOCKER_REPO}:latest || true
+                        docker rmi ${DOCKER_REPO}:latest || true
 
-        //                 docker compose up -d
-        //             """
+                        docker compose up -d
+                    """
 
-        //         }
-        //     }
-        // }
+                }
+            }
+        }
     }
 
     post {
