@@ -15,8 +15,6 @@
 
 # VietRecruit
 
-Test Jenkins
-
 <p align="center">
     <a href="https://example.com" target="_blank"><img src="assets/img/vietrecruit-banner.svg" height="300" alt="VietRecruit" /></a>&nbsp;
 </p>
