@@ -53,7 +53,7 @@ pipeline {
 
                         docker compose down -v
 
-                        docker rmi nguyenminh1301/vietrecruit:latest || true
+                        docker rmi ${DOCKER_REPO}:latest || true
 
                         docker compose up -d
                     """
