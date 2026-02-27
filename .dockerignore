@@ -4,6 +4,7 @@ target
 .idea
 .vscode
 **/*.iml
+.agent
 README.md
 HELP.md
 LICENSE
