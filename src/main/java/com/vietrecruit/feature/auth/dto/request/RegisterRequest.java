@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,20 +16,34 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "Payload for user registration")
 public class RegisterRequest {
 
+    @Schema(
+            description = "User's email address",
+            example = "newuser@example.com",
+            requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     private String email;
 
+    @Schema(
+            description = "User's password (min 8 chars)",
+            example = "SecurePass123!",
+            requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "Password is required")
     @Size(min = 8, max = 72, message = "Password must be between 8 and 72 characters")
     private String password;
 
+    @Schema(
+            description = "User's full name",
+            example = "John Doe",
+            requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "Full name is required")
     @Size(max = 255, message = "Full name must not exceed 255 characters")
     private String fullName;
 
+    @Schema(description = "User's phone number", example = "+1234567890")
     @Size(max = 50, message = "Phone must not exceed 50 characters")
     private String phone;
 }

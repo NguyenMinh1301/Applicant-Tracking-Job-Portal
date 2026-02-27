@@ -13,6 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import com.vietrecruit.common.security.EmailVerificationFilter;
 import com.vietrecruit.common.security.JwtAuthenticationFilter;
 import com.vietrecruit.common.security.oauth2.CustomOAuth2UserService;
+import com.vietrecruit.common.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.vietrecruit.common.security.oauth2.OAuth2AuthenticationFailureHandler;
 import com.vietrecruit.common.security.oauth2.OAuth2AuthenticationSuccessHandler;
 
@@ -27,6 +28,8 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final EmailVerificationFilter emailVerificationFilter;
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final HttpCookieOAuth2AuthorizationRequestRepository
+            cookieAuthorizationRequestRepository;
     private final OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
     private final OAuth2AuthenticationFailureHandler oAuth2FailureHandler;
 
@@ -44,9 +47,10 @@ public class SecurityConfig {
     };
 
     private static final String[] publicOtherEndpoints = {
-        "/v3/api-docs/**",
-        "/swagger-ui.html",
-        "/swagger-ui/**",
+        "/vietrecruit/v3/api-docs/**",
+        "/vietrecruit/api-docs/**",
+        "/vietrecruit/swagger-ui.html",
+        "/vietrecruit/swagger-ui/**",
         "/actuator/**",
         "/actuator/prometheus",
         "/health/**"
@@ -77,7 +81,10 @@ public class SecurityConfig {
                 .oauth2Login(
                         oauth2 ->
                                 oauth2.authorizationEndpoint(
-                                                auth -> auth.baseUri("/oauth2/authorize"))
+                                                auth ->
+                                                        auth.baseUri("/oauth2/authorize")
+                                                                .authorizationRequestRepository(
+                                                                        cookieAuthorizationRequestRepository))
                                         .redirectionEndpoint(
                                                 redirect ->
                                                         redirect.baseUri(

@@ -26,6 +26,8 @@ import lombok.extern.slf4j.Slf4j;
 public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
     private final AuthService authService;
+    private final HttpCookieOAuth2AuthorizationRequestRepository
+            cookieAuthorizationRequestRepository;
 
     @Value("${spring.application.frontend-url}")
     private String frontendBaseUrl;
@@ -58,6 +60,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                         URLEncoder.encode(loginResponse.getRefreshToken(), StandardCharsets.UTF_8),
                         loginResponse.getExpiresIn());
 
+        cookieAuthorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
         response.sendRedirect(redirectUrl);
     }
 
