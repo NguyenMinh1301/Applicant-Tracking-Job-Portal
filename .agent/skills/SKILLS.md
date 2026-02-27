@@ -41,3 +41,13 @@
 
 ## Tools & Utilities
 - [Bash/Linux](./bash-linux/SKILL.md) - Terminal patterns, scripting, and command-line efficiency.
+
+## File Processing & Data Engineering
+- [Pdf](./pdf/SKILL.md) - Use this skill whenever the user wants to do anything with PDF files.
+- [Xlsx](./xlsx/SKILL.md) - Use this skill any time a spreadsheet file is the primary input or output.
+- [Docx](./docx/SKILL.md) - Use this skill whenever the user wants to create, read, edit, or manipulate Word documents.
+- [Pptx](./pptx/SKILL.md) - Use this skill any time a .
+
+## DevOps & Automation
+- [Webapp Testing](./webapp-testing/SKILL.md) - Toolkit for interacting with and testing local web applications using Playwright.
+- [Web Artifacts Builder](./web-artifacts-builder/SKILL.md) - Suite of tools for creating elaborate, multi-component claude.
