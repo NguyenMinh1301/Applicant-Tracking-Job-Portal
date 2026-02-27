@@ -19,16 +19,25 @@ import com.vietrecruit.feature.user.dto.response.UserProfileResponse;
 import com.vietrecruit.feature.user.service.ClientUserService;
 
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @Validated
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(ApiConstants.ClientUser.ROOT)
+@Tag(name = "Client User Service", description = "Endpoints for user's own profile management")
 public class ClientUserController extends BaseController {
 
     private final ClientUserService clientUserService;
 
+    @Operation(
+            summary = "Get Profile",
+            description = "Retrieves the profile of the currently authenticated user")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Profile retrieved successfully")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
     @GetMapping(ApiConstants.ClientUser.ME)
     public ResponseEntity<ApiResponse<UserProfileResponse>> getProfile() {
@@ -37,6 +46,12 @@ public class ClientUserController extends BaseController {
                         ApiSuccessCode.USER_FETCH_SUCCESS, clientUserService.getProfile()));
     }
 
+    @Operation(
+            summary = "Update Profile",
+            description = "Updates the profile of the currently authenticated user")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Profile updated successfully")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
     @PutMapping(ApiConstants.ClientUser.ME)
     public ResponseEntity<ApiResponse<UserProfileResponse>> updateProfile(
