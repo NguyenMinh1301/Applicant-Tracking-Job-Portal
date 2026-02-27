@@ -32,3 +32,12 @@ springdoc:
   api-docs:
     path: /vietrecruit/v3/api-docs
   server-url: ${APP_BASE_URL}
+
+server:
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        same-site: none
+        secure: true
+        http-only: true
