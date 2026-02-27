@@ -20,6 +20,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class OAuth2AuthenticationFailureHandler implements AuthenticationFailureHandler {
 
+    private final HttpCookieOAuth2AuthorizationRequestRepository
+            cookieAuthorizationRequestRepository;
+
     @Value("${spring.application.frontend-url}")
     private String frontendBaseUrl;
 
@@ -31,6 +34,8 @@ public class OAuth2AuthenticationFailureHandler implements AuthenticationFailure
             throws IOException {
 
         log.error("OAuth2 authentication failed: {}", exception.getMessage());
+
+        cookieAuthorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
 
         String redirectUrl =
                 String.format(
