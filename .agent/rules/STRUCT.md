@@ -26,6 +26,7 @@ VietRecruit/
 │   │   │   │   ├── config/             # Global configurations (Security, Kafka)
 │   │   │   │   ├── exception/          # Global exception handling
 │   │   │   │   ├── response/           # Standardized API response wrappers
+│   │   │   │   ├── security/           # Security configuration global
 │   │   │   │   └── ApiConstants.java   # API endpoint constants
 │   │   │   ├── feature/                # Feature modules (Domain-Driven Design)
 │   │   │   │   └── example/            # Example module
@@ -42,7 +43,10 @@ VietRecruit/
 │   │       │   ├── circuitbreaker/
 │   │       │   ├── ratelimiter/
 │   │       │   └── retry/
+│   │       ├── templates/email         # Email templates
 │   │       ├── application.yaml        # Main configuration
+│   │       ├── application.dev.yaml    # Configuration variables for the development environment
+│   │       ├── application.prod.yaml   # Configuration variables for the production environment
 │   │       └── logback-spring.xml      # Logging configuration
 │   └── test/                           # Unit and Integration tests
 └── pom.xml                             # Maven dependencies
@@ -77,5 +81,6 @@ The project follows a **Modular Monolith** approach with a **Layered Architectur
 -   **Messaging**: Kafka
 -   **Search**: Elasticsearch
 -   **Resilience**: Resilience4j
+-   **Auth provider**: Google, GitHub
 -   **Build Tool**: Maven
 -   **Logging**: ELK Stack
