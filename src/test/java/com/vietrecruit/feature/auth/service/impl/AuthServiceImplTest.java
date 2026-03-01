@@ -24,7 +24,8 @@ import com.vietrecruit.common.security.AuthCacheService;
 import com.vietrecruit.common.security.JwtService;
 import com.vietrecruit.feature.auth.dto.request.LoginRequest;
 import com.vietrecruit.feature.auth.dto.request.RegisterRequest;
-import com.vietrecruit.feature.auth.dto.request.ResendVerificationRequest;
+import com.vietrecruit.feature.auth.dto.request.ResendOtpRequest;
+import com.vietrecruit.feature.auth.dto.request.VerifyOtpRequest;
 import com.vietrecruit.feature.auth.dto.response.LoginResponse;
 import com.vietrecruit.feature.auth.entity.RefreshToken;
 import com.vietrecruit.feature.auth.repository.RefreshTokenRepository;
@@ -84,6 +85,8 @@ class AuthServiceImplTest {
                         .build();
         testUser.getRoles().add(testRole);
     }
+
+    // ── Login Tests ─────────────────────────────────────────────────────
 
     @Test
     @DisplayName("Should login successfully and return tokens")
@@ -176,7 +179,24 @@ class AuthServiceImplTest {
     }
 
     @Test
-    @DisplayName("Should register new user and send verification email")
+    @DisplayName("Should throw AUTH_INVALID_CREDENTIALS for OAuth2-only user with null password")
+    void login_OAuthOnlyUser_NoPassword_ThrowsInvalidCredentials() {
+        testUser.setPasswordHash(null);
+
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("password123");
+
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
+
+        ApiException exception = assertThrows(ApiException.class, () -> authService.login(request));
+        assertEquals(ApiErrorCode.AUTH_INVALID_CREDENTIALS, exception.getErrorCode());
+    }
+
+    // ── Register Tests ──────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("Should register new user and send verification OTP")
     void register_Success() {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("new@example.com");
@@ -209,82 +229,204 @@ class AuthServiceImplTest {
         assertTrue(savedUser.getRoles().contains(testRole));
 
         verify(authCacheService, times(1))
-                .storeVerificationToken(anyString(), any(UUID.class), eq(900L));
+                .storeOtp(eq("new@example.com"), anyString(), any(java.util.UUID.class), eq(600L));
+        verify(authCacheService, times(1)).setCooldown(eq("new@example.com"), eq(60L));
 
         ArgumentCaptor<EmailRequest> emailCaptor = ArgumentCaptor.forClass(EmailRequest.class);
         verify(notificationService, times(1)).send(emailCaptor.capture());
         assertEquals("email-verification", emailCaptor.getValue().templateId());
     }
 
-    @Test
-    @DisplayName("Should throw AUTH_INVALID_CREDENTIALS for OAuth2-only user with null password")
-    void login_OAuthOnlyUser_NoPassword_ThrowsInvalidCredentials() {
-        testUser.setPasswordHash(null);
-
-        LoginRequest request = new LoginRequest();
-        request.setEmail("test@example.com");
-        request.setPassword("password123");
-
-        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
-
-        ApiException exception = assertThrows(ApiException.class, () -> authService.login(request));
-        assertEquals(ApiErrorCode.AUTH_INVALID_CREDENTIALS, exception.getErrorCode());
-    }
+    // ── Verify OTP Tests ────────────────────────────────────────────────
 
     @Test
-    @DisplayName("Should verify email with valid token")
-    void verifyEmail_ValidToken_SetsVerified() {
+    @DisplayName("Should verify OTP successfully")
+    void verifyOtp_ValidCode_SetsVerified() {
         testUser.setEmailVerified(false);
-        String rawToken = "test-token-uuid";
+        VerifyOtpRequest request = new VerifyOtpRequest("test@example.com", "12345678");
 
-        when(authCacheService.getVerificationToken(anyString())).thenReturn(testUser.getId());
+        when(authCacheService.isLockedOut("test@example.com")).thenReturn(false);
+        when(authCacheService.getOtpContext("test@example.com"))
+                .thenReturn(new AuthCacheService.OtpContext("12345678", testUser.getId(), 0));
         when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
 
-        authService.verifyEmail(rawToken);
+        authService.verifyOtp(request);
 
         assertTrue(testUser.getEmailVerified());
         assertNotNull(testUser.getEmailVerifiedAt());
         verify(userRepository, times(1)).save(testUser);
-        verify(authCacheService, times(1)).deleteVerificationToken(anyString());
+        verify(authCacheService, times(1)).deleteOtp("test@example.com");
     }
 
     @Test
-    @DisplayName("Should throw AUTH_VERIFY_TOKEN_INVALID for invalid token")
-    void verifyEmail_InvalidToken_ThrowsException() {
-        when(authCacheService.getVerificationToken(anyString())).thenReturn(null);
+    @DisplayName("Should throw AUTH_OTP_LOCKED when locked out")
+    void verifyOtp_LockedOut_ThrowsOtpLocked() {
+        VerifyOtpRequest request = new VerifyOtpRequest("test@example.com", "12345678");
+
+        when(authCacheService.isLockedOut("test@example.com")).thenReturn(true);
 
         ApiException exception =
-                assertThrows(ApiException.class, () -> authService.verifyEmail("invalid-token"));
-        assertEquals(ApiErrorCode.AUTH_VERIFY_TOKEN_INVALID, exception.getErrorCode());
+                assertThrows(ApiException.class, () -> authService.verifyOtp(request));
+        assertEquals(ApiErrorCode.AUTH_OTP_LOCKED, exception.getErrorCode());
     }
 
     @Test
-    @DisplayName("Should resend verification for unverified user")
-    void resendVerification_UnverifiedUser_SendsEmail() {
-        testUser.setEmailVerified(false);
-        ResendVerificationRequest request = new ResendVerificationRequest("test@example.com");
+    @DisplayName("Should throw AUTH_OTP_EXPIRED when no OTP context found")
+    void verifyOtp_ExpiredOtp_ThrowsOtpExpired() {
+        VerifyOtpRequest request = new VerifyOtpRequest("test@example.com", "12345678");
 
+        when(authCacheService.isLockedOut("test@example.com")).thenReturn(false);
+        when(authCacheService.getOtpContext("test@example.com")).thenReturn(null);
+
+        ApiException exception =
+                assertThrows(ApiException.class, () -> authService.verifyOtp(request));
+        assertEquals(ApiErrorCode.AUTH_OTP_EXPIRED, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("Should throw AUTH_OTP_INVALID and increment attempts on wrong code")
+    void verifyOtp_WrongCode_IncrementsAttempts() {
+        VerifyOtpRequest request = new VerifyOtpRequest("test@example.com", "99999999");
+
+        when(authCacheService.isLockedOut("test@example.com")).thenReturn(false);
+        when(authCacheService.getOtpContext("test@example.com"))
+                .thenReturn(new AuthCacheService.OtpContext("12345678", testUser.getId(), 0));
+        when(authCacheService.incrementAttempts("test@example.com")).thenReturn(1);
+
+        ApiException exception =
+                assertThrows(ApiException.class, () -> authService.verifyOtp(request));
+        assertEquals(ApiErrorCode.AUTH_OTP_INVALID, exception.getErrorCode());
+        verify(authCacheService, times(1)).incrementAttempts("test@example.com");
+    }
+
+    @Test
+    @DisplayName("Should lock out and throw AUTH_OTP_LOCKED after max attempts")
+    void verifyOtp_MaxAttempts_LocksAndThrowsOtpLocked() {
+        VerifyOtpRequest request = new VerifyOtpRequest("test@example.com", "99999999");
+
+        when(authCacheService.isLockedOut("test@example.com")).thenReturn(false);
+        when(authCacheService.getOtpContext("test@example.com"))
+                .thenReturn(new AuthCacheService.OtpContext("12345678", testUser.getId(), 4));
+        when(authCacheService.incrementAttempts("test@example.com")).thenReturn(5);
+
+        ApiException exception =
+                assertThrows(ApiException.class, () -> authService.verifyOtp(request));
+        assertEquals(ApiErrorCode.AUTH_OTP_LOCKED, exception.getErrorCode());
+        verify(authCacheService, times(1)).deleteOtp("test@example.com");
+        verify(authCacheService, times(1)).setLockout("test@example.com", 1800L);
+    }
+
+    // ── Resend OTP Tests ────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("Should resend OTP for unverified user")
+    void resendOtp_UnverifiedUser_SendsOtp() {
+        testUser.setEmailVerified(false);
+        ResendOtpRequest request = new ResendOtpRequest("test@example.com");
+
+        when(authCacheService.isOnCooldown("test@example.com")).thenReturn(false);
+        when(authCacheService.isLockedOut("test@example.com")).thenReturn(false);
         when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
 
-        authService.resendVerification(request);
+        authService.resendOtp(request);
 
         verify(authCacheService, times(1))
-                .storeVerificationToken(anyString(), eq(testUser.getId()), eq(900L));
+                .storeOtp(eq("test@example.com"), anyString(), eq(testUser.getId()), eq(600L));
+        verify(authCacheService, times(1)).setCooldown("test@example.com", 60L);
         verify(notificationService, times(1)).send(any(EmailRequest.class));
     }
 
     @Test
     @DisplayName("Should silently succeed for already verified user resend")
-    void resendVerification_AlreadyVerified_SilentSuccess() {
+    void resendOtp_AlreadyVerified_SilentSuccess() {
         testUser.setEmailVerified(true);
-        ResendVerificationRequest request = new ResendVerificationRequest("test@example.com");
+        ResendOtpRequest request = new ResendOtpRequest("test@example.com");
 
+        when(authCacheService.isOnCooldown("test@example.com")).thenReturn(false);
+        when(authCacheService.isLockedOut("test@example.com")).thenReturn(false);
         when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
 
-        authService.resendVerification(request);
+        authService.resendOtp(request);
 
         verify(authCacheService, never())
-                .storeVerificationToken(anyString(), any(UUID.class), anyLong());
+                .storeOtp(anyString(), anyString(), any(java.util.UUID.class), anyLong());
         verify(notificationService, never()).send(any(EmailRequest.class));
+    }
+
+    @Test
+    @DisplayName("Should throw AUTH_OTP_COOLDOWN when on cooldown")
+    void resendOtp_OnCooldown_ThrowsOtpCooldown() {
+        ResendOtpRequest request = new ResendOtpRequest("test@example.com");
+
+        when(authCacheService.isOnCooldown("test@example.com")).thenReturn(true);
+
+        ApiException exception =
+                assertThrows(ApiException.class, () -> authService.resendOtp(request));
+        assertEquals(ApiErrorCode.AUTH_OTP_COOLDOWN, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("Should throw AUTH_OTP_LOCKED when locked out on resend")
+    void resendOtp_LockedOut_ThrowsOtpLocked() {
+        ResendOtpRequest request = new ResendOtpRequest("test@example.com");
+
+        when(authCacheService.isOnCooldown("test@example.com")).thenReturn(false);
+        when(authCacheService.isLockedOut("test@example.com")).thenReturn(true);
+
+        ApiException exception =
+                assertThrows(ApiException.class, () -> authService.resendOtp(request));
+        assertEquals(ApiErrorCode.AUTH_OTP_LOCKED, exception.getErrorCode());
+    }
+
+    // ── OAuth2 Provider Claim Gating Tests ──────────────────────────────
+
+    @Test
+    @DisplayName("Should auto-verify email when Google provider confirms email_verified")
+    void processOAuth2Login_GoogleVerified_AutoVerifies() {
+        testUser.setEmailVerified(false);
+        testUser.setEmailVerifiedAt(null);
+
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(userAuthProviderRepository.findByUserIdAndProvider(testUser.getId(), "GOOGLE"))
+                .thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+        when(userRepository.findByIdWithRolesAndPermissions(testUser.getId()))
+                .thenReturn(Optional.of(testUser));
+        when(jwtService.generateAccessToken(eq(testUser.getId()), anySet(), anyBoolean()))
+                .thenReturn("access.token");
+        when(jwtService.generateRefreshToken()).thenReturn("refresh.token");
+        when(jwtService.getRefreshTokenExpirationMs()).thenReturn(604800000L);
+        when(jwtService.getAccessTokenExpirationMs()).thenReturn(900000L);
+
+        authService.processOAuth2Login(
+                "GOOGLE", "test@example.com", "google-id", "Test", "avatar-url", true);
+
+        assertTrue(testUser.getEmailVerified());
+        assertNotNull(testUser.getEmailVerifiedAt());
+    }
+
+    @Test
+    @DisplayName("Should NOT auto-verify email for GitHub provider")
+    void processOAuth2Login_GitHubUnverified_NoAutoVerify() {
+        testUser.setEmailVerified(false);
+        testUser.setEmailVerifiedAt(null);
+
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(userAuthProviderRepository.findByUserIdAndProvider(testUser.getId(), "GITHUB"))
+                .thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+        when(userRepository.findByIdWithRolesAndPermissions(testUser.getId()))
+                .thenReturn(Optional.of(testUser));
+        when(jwtService.generateAccessToken(eq(testUser.getId()), anySet(), anyBoolean()))
+                .thenReturn("access.token");
+        when(jwtService.generateRefreshToken()).thenReturn("refresh.token");
+        when(jwtService.getRefreshTokenExpirationMs()).thenReturn(604800000L);
+        when(jwtService.getAccessTokenExpirationMs()).thenReturn(900000L);
+
+        authService.processOAuth2Login(
+                "GITHUB", "test@example.com", "github-id", "Test", "avatar-url", false);
+
+        assertFalse(testUser.getEmailVerified());
+        assertNull(testUser.getEmailVerifiedAt());
     }
 }

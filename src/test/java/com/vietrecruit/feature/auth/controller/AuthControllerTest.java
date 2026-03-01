@@ -2,7 +2,6 @@ package com.vietrecruit.feature.auth.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -26,8 +25,9 @@ import com.vietrecruit.common.exception.GlobalExceptionHandler;
 import com.vietrecruit.feature.auth.dto.request.ForgotPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.LoginRequest;
 import com.vietrecruit.feature.auth.dto.request.RegisterRequest;
-import com.vietrecruit.feature.auth.dto.request.ResendVerificationRequest;
+import com.vietrecruit.feature.auth.dto.request.ResendOtpRequest;
 import com.vietrecruit.feature.auth.dto.request.TokenRefreshRequest;
+import com.vietrecruit.feature.auth.dto.request.VerifyOtpRequest;
 import com.vietrecruit.feature.auth.dto.response.LoginResponse;
 import com.vietrecruit.feature.auth.dto.response.TokenRefreshResponse;
 import com.vietrecruit.feature.auth.service.AuthService;
@@ -152,42 +152,48 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("Should verify email successfully")
-    void verifyEmail_Success() throws Exception {
-        doNothing().when(authService).verifyEmail("valid-token");
+    @DisplayName("Should verify OTP successfully")
+    void verifyOtp_Success() throws Exception {
+        VerifyOtpRequest request = new VerifyOtpRequest("test@example.com", "12345678");
+
+        doNothing().when(authService).verifyOtp(any(VerifyOtpRequest.class));
 
         mockMvc.perform(
-                        get(ApiConstants.Auth.ROOT + ApiConstants.Auth.VERIFY_EMAIL)
-                                .param("token", "valid-token"))
+                        post(ApiConstants.Auth.ROOT + ApiConstants.Auth.VERIFY_OTP)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.code").value("AUTH_VERIFY_SUCCESS"));
     }
 
     @Test
-    @DisplayName("Should return 400 for invalid verification token")
-    void verifyEmail_InvalidToken() throws Exception {
-        doThrow(new ApiException(ApiErrorCode.AUTH_VERIFY_TOKEN_INVALID))
+    @DisplayName("Should return 400 for invalid OTP code")
+    void verifyOtp_InvalidCode() throws Exception {
+        VerifyOtpRequest request = new VerifyOtpRequest("test@example.com", "99999999");
+
+        doThrow(new ApiException(ApiErrorCode.AUTH_OTP_INVALID))
                 .when(authService)
-                .verifyEmail("bad-token");
+                .verifyOtp(any(VerifyOtpRequest.class));
 
         mockMvc.perform(
-                        get(ApiConstants.Auth.ROOT + ApiConstants.Auth.VERIFY_EMAIL)
-                                .param("token", "bad-token"))
+                        post(ApiConstants.Auth.ROOT + ApiConstants.Auth.VERIFY_OTP)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.code").value("AUTH_VERIFY_TOKEN_INVALID"));
+                .andExpect(jsonPath("$.code").value("AUTH_OTP_INVALID"));
     }
 
     @Test
-    @DisplayName("Should resend verification email successfully")
-    void resendVerification_Success() throws Exception {
-        ResendVerificationRequest request = new ResendVerificationRequest("test@example.com");
+    @DisplayName("Should resend OTP successfully")
+    void resendOtp_Success() throws Exception {
+        ResendOtpRequest request = new ResendOtpRequest("test@example.com");
 
-        doNothing().when(authService).resendVerification(any(ResendVerificationRequest.class));
+        doNothing().when(authService).resendOtp(any(ResendOtpRequest.class));
 
         mockMvc.perform(
-                        post(ApiConstants.Auth.ROOT + ApiConstants.Auth.RESEND_VERIFICATION)
+                        post(ApiConstants.Auth.ROOT + ApiConstants.Auth.RESEND_OTP)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
