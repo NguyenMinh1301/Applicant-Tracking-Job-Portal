@@ -27,7 +27,15 @@ public enum ApiSuccessCode {
     USER_DELETE_SUCCESS("USER_DELETE_SUCCESS", "User deleted successfully"),
     USER_FETCH_SUCCESS("USER_FETCH_SUCCESS", "User retrieved successfully"),
     USER_LIST_SUCCESS("USER_LIST_SUCCESS", "User list retrieved successfully"),
-    USER_SEARCH_SUCCESS("USER_SEARCH_SUCCESS", "User search completed successfully");
+    USER_SEARCH_SUCCESS("USER_SEARCH_SUCCESS", "User search completed successfully"),
+
+    // Subscription
+    PLAN_LIST_SUCCESS("PLAN_LIST_SUCCESS", "Plans retrieved successfully"),
+    PLAN_FETCH_SUCCESS("PLAN_FETCH_SUCCESS", "Plan retrieved successfully"),
+    SUBSCRIPTION_CREATE_SUCCESS("SUBSCRIPTION_CREATE_SUCCESS", "Subscription activated successfully"),
+    SUBSCRIPTION_FETCH_SUCCESS("SUBSCRIPTION_FETCH_SUCCESS", "Subscription retrieved successfully"),
+    SUBSCRIPTION_CANCEL_SUCCESS("SUBSCRIPTION_CANCEL_SUCCESS", "Subscription cancelled successfully"),
+    QUOTA_FETCH_SUCCESS("QUOTA_FETCH_SUCCESS", "Quota usage retrieved successfully");
 
     // spotless:on
     private final String code;

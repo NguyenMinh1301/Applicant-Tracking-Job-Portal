@@ -37,4 +37,20 @@ public final class ApiConstants {
         public static final String DELETE = "/{id}";
         public static final String SEARCH = "/search";
     }
+
+    public static final class Plan {
+        private Plan() {}
+
+        public static final String ROOT = API_VERSION + "/plans";
+        public static final String GET = "/{planId}";
+    }
+
+    public static final class Subscription {
+        private Subscription() {}
+
+        public static final String ROOT = API_VERSION + "/subscriptions";
+        public static final String CURRENT = "/current";
+        public static final String CANCEL = "/current/cancel";
+        public static final String QUOTA = "/current/quota";
+    }
 }
