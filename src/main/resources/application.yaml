@@ -60,6 +60,11 @@ resend:
   api-key: ${RESEND_API_KEY}
   domain: vietrecruit.site
 
+vietrecruit:
+  admin:
+    email: ${ADMIN_EMAIL}
+    password: ${ADMIN_PASSWORD}
+
 management:
   health:
     circuitbreakers:

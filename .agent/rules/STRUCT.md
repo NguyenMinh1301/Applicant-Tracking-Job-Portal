@@ -25,10 +25,13 @@ VietRecruit/
 │   │   │   │   ├── base/               # Base controllers, entities
 │   │   │   │   ├── config/             # Global configurations (Security, Kafka)
 │   │   │   │   ├── exception/          # Global exception handling
+│   │   │   │   ├── init/               # Application initializers and seeders
 │   │   │   │   ├── response/           # Standardized API response wrappers
 │   │   │   │   ├── security/           # Security configuration global
 │   │   │   │   └── ApiConstants.java   # API endpoint constants
 │   │   │   ├── feature/                # Feature modules (Domain-Driven Design)
+│   │   │   │   ├── job/                # Job management & posting
+│   │   │   │   ├── subscription/       # Employer subscription & quota
 │   │   │   │   └── example/            # Example module
 │   │   │   │       ├── controller/     # REST Endpoints
 │   │   │   │       ├── dto/            # Data Transfer Objects
@@ -81,6 +84,7 @@ The project follows a **Modular Monolith** approach with a **Layered Architectur
 -   **Messaging**: Kafka
 -   **Search**: Elasticsearch
 -   **Resilience**: Resilience4j
+-   **Scheduling**: Spring @Scheduled
 -   **Auth provider**: Google, GitHub
 -   **Build Tool**: Maven
 -   **Logging**: ELK Stack

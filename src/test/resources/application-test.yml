@@ -25,3 +25,8 @@ jwt:
 resend:
   api-key: test-resend-key
   domain: test.vietrecruit.site
+
+vietrecruit:
+  admin:
+    email: test-admin@vietrecruit.site
+    password: test-password
