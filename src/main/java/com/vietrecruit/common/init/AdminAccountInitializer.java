@@ -20,67 +20,69 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Seeds a default SYSTEM_ADMIN account on first startup if none exists.
  *
- * <p>
- * Credentials are configured via application.yaml / .env properties.
+ * <p>Credentials are configured via application.yaml / .env properties.
  */
 @Slf4j
 @Component
 @Order(1)
 public class AdminAccountInitializer implements ApplicationRunner {
 
-        private static final String ADMIN_FULL_NAME = "System Administrator";
-        private static final String ROLE_SYSTEM_ADMIN = "SYSTEM_ADMIN";
+    private static final String ADMIN_FULL_NAME = "System Administrator";
+    private static final String ROLE_SYSTEM_ADMIN = "SYSTEM_ADMIN";
 
-        private final UserRepository userRepository;
-        private final RoleRepository roleRepository;
-        private final PasswordEncoder passwordEncoder;
-        private final String adminEmail;
-        private final String adminPassword;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final String adminEmail;
+    private final String adminPassword;
 
-        public AdminAccountInitializer(
-                        UserRepository userRepository,
-                        RoleRepository roleRepository,
-                        PasswordEncoder passwordEncoder,
-                        @Value("${vietrecruit.admin.email}") String adminEmail,
-                        @Value("${vietrecruit.admin.password}") String adminPassword) {
-                this.userRepository = userRepository;
-                this.roleRepository = roleRepository;
-                this.passwordEncoder = passwordEncoder;
-                this.adminEmail = adminEmail;
-                this.adminPassword = adminPassword;
+    public AdminAccountInitializer(
+            UserRepository userRepository,
+            RoleRepository roleRepository,
+            PasswordEncoder passwordEncoder,
+            @Value("${vietrecruit.admin.email}") String adminEmail,
+            @Value("${vietrecruit.admin.password}") String adminPassword) {
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.adminEmail = adminEmail;
+        this.adminPassword = adminPassword;
+    }
+
+    @Override
+    @Transactional
+    public void run(ApplicationArguments args) {
+        if (userRepository.existsByEmail(adminEmail)) {
+            log.info("Admin account already exists, skipping initialization");
+            return;
         }
 
-        @Override
-        @Transactional
-        public void run(ApplicationArguments args) {
-                if (userRepository.existsByEmail(adminEmail)) {
-                        log.info("Admin account already exists, skipping initialization");
-                        return;
-                }
+        var adminRole =
+                roleRepository
+                        .findByCode(ROLE_SYSTEM_ADMIN)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "Role SYSTEM_ADMIN not found. Flyway migrations may not have run."));
 
-                var adminRole = roleRepository
-                                .findByCode(ROLE_SYSTEM_ADMIN)
-                                .orElseThrow(
-                                                () -> new IllegalStateException(
-                                                                "Role SYSTEM_ADMIN not found. Flyway migrations may not have run."));
+        var admin =
+                User.builder()
+                        .email(adminEmail)
+                        .passwordHash(passwordEncoder.encode(adminPassword))
+                        .fullName(ADMIN_FULL_NAME)
+                        .emailVerified(true)
+                        .emailVerifiedAt(Instant.now())
+                        .isActive(true)
+                        .isLocked(false)
+                        .roles(Set.of(adminRole))
+                        .build();
 
-                var admin = User.builder()
-                                .email(adminEmail)
-                                .passwordHash(passwordEncoder.encode(adminPassword))
-                                .fullName(ADMIN_FULL_NAME)
-                                .emailVerified(true)
-                                .emailVerifiedAt(Instant.now())
-                                .isActive(true)
-                                .isLocked(false)
-                                .roles(Set.of(adminRole))
-                                .build();
+        userRepository.save(admin);
 
-                userRepository.save(admin);
-
-                log.warn("==========================================================");
-                log.warn("  DEFAULT ADMIN ACCOUNT CREATED");
-                log.warn("  Email:    {}", adminEmail);
-                log.warn("  Password: {}", adminPassword);
-                log.warn("==========================================================");
-        }
+        log.warn("==========================================================");
+        log.warn("  DEFAULT ADMIN ACCOUNT CREATED");
+        log.warn("  Email:    {}", adminEmail);
+        log.warn("  Password: {}", adminPassword);
+        log.warn("==========================================================");
+    }
 }
