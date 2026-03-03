@@ -21,7 +21,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
-import com.vietrecruit.feature.subscription.entity.BillingCycle;
+import com.vietrecruit.common.enums.BillingCycle;
+import com.vietrecruit.feature.payment.enums.PaymentStatus;
 import com.vietrecruit.feature.subscription.entity.SubscriptionPlan;
 
 import lombok.AllArgsConstructor;
@@ -73,6 +74,12 @@ public class PaymentTransaction {
 
     @Column(name = "payos_reference")
     private String payosReference;
+
+    @Column(name = "failure_code", length = 10)
+    private String failureCode;
+
+    @Column(name = "failure_reason")
+    private String failureReason;
 
     @Column(name = "paid_at")
     private Instant paidAt;

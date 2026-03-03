@@ -4,7 +4,7 @@ import java.util.UUID;
 
 import jakarta.validation.constraints.NotNull;
 
-import com.vietrecruit.feature.subscription.entity.BillingCycle;
+import com.vietrecruit.common.enums.BillingCycle;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
