@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.common.base.BaseController;
+import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.response.ApiResponse;
-import com.vietrecruit.common.response.ApiSuccessCode;
 import com.vietrecruit.feature.user.dto.request.UpdateProfileRequest;
 import com.vietrecruit.feature.user.dto.response.UserProfileResponse;
 import com.vietrecruit.feature.user.service.ClientUserService;
