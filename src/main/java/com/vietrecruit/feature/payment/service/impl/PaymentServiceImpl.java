@@ -5,20 +5,23 @@ import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.vietrecruit.common.config.PayOSConfig;
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
+import com.vietrecruit.common.enums.BillingCycle;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.payment.dto.response.CheckoutResponse;
 import com.vietrecruit.feature.payment.dto.response.PaymentStatusResponse;
-import com.vietrecruit.feature.payment.entity.PaymentStatus;
 import com.vietrecruit.feature.payment.entity.PaymentTransaction;
+import com.vietrecruit.feature.payment.enums.PaymentStatus;
 import com.vietrecruit.feature.payment.mapper.PaymentMapper;
 import com.vietrecruit.feature.payment.repository.PaymentTransactionRepository;
+import com.vietrecruit.feature.payment.repository.TransactionRecordRepository;
 import com.vietrecruit.feature.payment.service.PaymentService;
-import com.vietrecruit.feature.subscription.entity.BillingCycle;
 import com.vietrecruit.feature.subscription.repository.EmployerSubscriptionRepository;
 import com.vietrecruit.feature.subscription.repository.SubscriptionPlanRepository;
 import com.vietrecruit.feature.subscription.service.SubscriptionService;
@@ -43,6 +46,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final SubscriptionPlanRepository planRepository;
     private final EmployerSubscriptionRepository subscriptionRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
+    private final TransactionRecordRepository transactionRecordRepository;
     private final SubscriptionService subscriptionService;
     private final PaymentMapper paymentMapper;
 
@@ -141,6 +145,14 @@ public class PaymentServiceImpl implements PaymentService {
 
             return paymentMapper.toCheckoutResponse(transaction);
 
+        } catch (DataIntegrityViolationException e) {
+            // Partial unique index violation: another pending payment was created
+            // concurrently
+            log.warn(
+                    "Concurrent checkout attempt for company={}, constraint violation: {}",
+                    companyId,
+                    e.getMessage());
+            throw new ApiException(ApiErrorCode.PAYMENT_ALREADY_PENDING);
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -151,6 +163,10 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
+    /**
+     * TX 1: Verify webhook, update payment status. Always commits independently of subscription
+     * activation. This ensures PAID status is persisted even if activation fails.
+     */
     @Override
     @Transactional
     public void handleWebhook(Object webhookBody) {
@@ -184,26 +200,85 @@ public class PaymentServiceImpl implements PaymentService {
         String code = data.getCode();
 
         if ("00".equals(code)) {
-            // Payment confirmed
+            // Payment confirmed — mark PAID in this TX
             tx.setStatus(PaymentStatus.PAID);
             tx.setPaidAt(Instant.now());
             paymentTransactionRepository.save(tx);
 
-            subscriptionService.activateSubscription(
-                    tx.getCompanyId(), tx.getPlan(), tx.getBillingCycle());
+            // Persist transaction record for history (idempotent)
+            if (!transactionRecordRepository.existsByOrderCode(orderCode)) {
+                var record = paymentMapper.toTransactionRecord(data, tx.getCompanyId());
+                transactionRecordRepository.save(record);
+                log.info("Transaction record persisted for orderCode={}", orderCode);
+            }
 
             log.info(
                     "Payment confirmed for orderCode={}, company={}, plan={}",
                     orderCode,
                     tx.getCompanyId(),
                     tx.getPlan().getCode());
+
+            // TX 2: Activate subscription in a separate transaction
+            // If this fails, the recovery job will pick it up
+            tryActivateSubscription(tx);
         } else {
             // Payment cancelled or failed
             tx.setStatus(PaymentStatus.CANCELLED);
+            tx.setFailureCode(code);
+            tx.setFailureReason(data.getDesc());
             paymentTransactionRepository.save(tx);
 
-            log.info("Payment cancelled/failed for orderCode={}, code={}", orderCode, code);
+            log.info(
+                    "Payment cancelled/failed for orderCode={}, code={}, reason={}",
+                    orderCode,
+                    code,
+                    data.getDesc());
         }
+    }
+
+    /**
+     * TX 2: Activate subscription in a separate transaction. If this fails, the PAID status from TX
+     * 1 is already committed and the recovery job will retry.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void tryActivateSubscription(PaymentTransaction tx) {
+        try {
+            subscriptionService.activateSubscription(
+                    tx.getCompanyId(), tx.getPlan(), tx.getBillingCycle());
+        } catch (Exception e) {
+            log.error(
+                    "Subscription activation failed for orderCode={}, company={}. "
+                            + "Recovery job will retry. Error: {}",
+                    tx.getOrderCode(),
+                    tx.getCompanyId(),
+                    e.getMessage(),
+                    e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void activateAfterPayment(Long orderCode) {
+        var tx =
+                paymentTransactionRepository
+                        .findByOrderCode(orderCode)
+                        .orElseThrow(() -> new ApiException(ApiErrorCode.PAYMENT_NOT_FOUND));
+
+        if (tx.getStatus() != PaymentStatus.PAID) {
+            log.warn(
+                    "activateAfterPayment called for orderCode={} but status={}",
+                    orderCode,
+                    tx.getStatus());
+            return;
+        }
+
+        subscriptionService.activateSubscription(
+                tx.getCompanyId(), tx.getPlan(), tx.getBillingCycle());
+
+        log.info(
+                "Recovery: subscription activated for orderCode={}, company={}",
+                orderCode,
+                tx.getCompanyId());
     }
 
     @Override

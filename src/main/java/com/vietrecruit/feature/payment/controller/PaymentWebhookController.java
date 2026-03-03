@@ -31,9 +31,10 @@ public class PaymentWebhookController {
         try {
             paymentService.handleWebhook(body);
         } catch (Exception e) {
-            log.error("Unexpected error processing PayOS webhook: {}", e.getMessage(), e);
+            // DB or infrastructure exception — return 500 so PayOS retries
+            log.error("Retryable error processing PayOS webhook: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
         }
-        // Always return 200 to prevent PayOS retries
         return ResponseEntity.ok().build();
     }
 }
