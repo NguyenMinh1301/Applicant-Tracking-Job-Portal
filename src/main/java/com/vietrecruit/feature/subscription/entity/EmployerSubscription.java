@@ -20,6 +20,9 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
+import com.vietrecruit.common.enums.BillingCycle;
+import com.vietrecruit.feature.subscription.enums.SubscriptionStatus;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

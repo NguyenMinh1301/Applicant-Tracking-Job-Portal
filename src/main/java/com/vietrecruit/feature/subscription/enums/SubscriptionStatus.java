@@ -1,4 +1,4 @@
-package com.vietrecruit.feature.subscription.entity;
+package com.vietrecruit.feature.subscription.enums;
 
 public enum SubscriptionStatus {
     ACTIVE,

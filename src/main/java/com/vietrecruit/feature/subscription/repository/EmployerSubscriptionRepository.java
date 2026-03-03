@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.vietrecruit.feature.subscription.entity.EmployerSubscription;
-import com.vietrecruit.feature.subscription.entity.SubscriptionStatus;
+import com.vietrecruit.feature.subscription.enums.SubscriptionStatus;
 
 public interface EmployerSubscriptionRepository extends JpaRepository<EmployerSubscription, UUID> {
 
