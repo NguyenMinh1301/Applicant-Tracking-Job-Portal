@@ -15,10 +15,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.job.entity.Job;
-import com.vietrecruit.feature.job.entity.JobStatus;
+import com.vietrecruit.feature.job.enums.JobStatus;
 import com.vietrecruit.feature.job.repository.JobRepository;
 import com.vietrecruit.feature.subscription.service.QuotaGuard;
 

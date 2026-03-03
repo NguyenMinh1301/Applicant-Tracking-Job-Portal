@@ -18,8 +18,8 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 
 import com.vietrecruit.common.config.kafka.KafkaTopicNames;
+import com.vietrecruit.common.enums.EmailSenderAlias;
 import com.vietrecruit.feature.notification.dto.EmailRequest;
-import com.vietrecruit.feature.notification.dto.EmailSenderAlias;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceImplTest {

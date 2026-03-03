@@ -19,7 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.subscription.dto.response.QuotaResponse;
 import com.vietrecruit.feature.subscription.dto.response.SubscriptionResponse;
@@ -103,9 +103,7 @@ class SubscriptionServiceImplTest {
 
         var result =
                 subscriptionService.activateSubscription(
-                        companyId,
-                        plan,
-                        com.vietrecruit.feature.subscription.entity.BillingCycle.MONTHLY);
+                        companyId, plan, com.vietrecruit.common.enums.BillingCycle.MONTHLY);
 
         assertNotNull(result);
         assertEquals("BASIC", result.getPlanCode());
@@ -125,8 +123,7 @@ class SubscriptionServiceImplTest {
                                 subscriptionService.activateSubscription(
                                         companyId,
                                         plan,
-                                        com.vietrecruit.feature.subscription.entity.BillingCycle
-                                                .MONTHLY));
+                                        com.vietrecruit.common.enums.BillingCycle.MONTHLY));
         assertEquals(ApiErrorCode.SUBSCRIPTION_ALREADY_ACTIVE, ex.getErrorCode());
     }
 

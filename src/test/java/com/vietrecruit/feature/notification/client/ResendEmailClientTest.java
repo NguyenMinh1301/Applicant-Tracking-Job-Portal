@@ -18,8 +18,8 @@ import com.resend.core.exception.ResendException;
 import com.resend.services.emails.Emails;
 import com.resend.services.emails.model.CreateEmailOptions;
 import com.resend.services.emails.model.CreateEmailResponse;
+import com.vietrecruit.common.enums.EmailSenderAlias;
 import com.vietrecruit.feature.notification.dto.EmailRequest;
-import com.vietrecruit.feature.notification.dto.EmailSenderAlias;
 
 @ExtendWith(MockitoExtension.class)
 class ResendEmailClientTest {

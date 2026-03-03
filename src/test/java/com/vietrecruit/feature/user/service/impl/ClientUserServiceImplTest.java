@@ -16,7 +16,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.common.security.SecurityUtils;
 import com.vietrecruit.feature.user.dto.request.UpdateProfileRequest;

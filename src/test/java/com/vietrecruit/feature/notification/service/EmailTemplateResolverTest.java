@@ -16,8 +16,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import com.vietrecruit.common.enums.EmailSenderAlias;
 import com.vietrecruit.feature.notification.dto.EmailRequest;
-import com.vietrecruit.feature.notification.dto.EmailSenderAlias;
 
 @ExtendWith(MockitoExtension.class)
 class EmailTemplateResolverTest {
