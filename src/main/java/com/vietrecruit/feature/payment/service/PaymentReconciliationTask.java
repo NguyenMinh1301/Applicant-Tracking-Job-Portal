@@ -38,7 +38,9 @@ public class PaymentReconciliationTask {
     public void reconcilePendingPayments() {
         var cutoff = Instant.now().minus(STALE_MINUTES, ChronoUnit.MINUTES);
         var lowerBound = Instant.now().minus(MAX_AGE_MINUTES, ChronoUnit.MINUTES);
-        var stale = paymentTransactionRepository.findStalePending(cutoff, lowerBound);
+        var stale =
+                paymentTransactionRepository.findStalePending(
+                        cutoff, lowerBound, PaymentStatus.PENDING);
 
         if (stale.isEmpty()) {
             log.debug("No stale pending payments found for reconciliation");

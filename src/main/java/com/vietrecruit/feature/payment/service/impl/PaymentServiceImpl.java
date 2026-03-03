@@ -22,6 +22,7 @@ import com.vietrecruit.feature.payment.mapper.PaymentMapper;
 import com.vietrecruit.feature.payment.repository.PaymentTransactionRepository;
 import com.vietrecruit.feature.payment.repository.TransactionRecordRepository;
 import com.vietrecruit.feature.payment.service.PaymentService;
+import com.vietrecruit.feature.subscription.enums.SubscriptionStatus;
 import com.vietrecruit.feature.subscription.repository.EmployerSubscriptionRepository;
 import com.vietrecruit.feature.subscription.repository.SubscriptionPlanRepository;
 import com.vietrecruit.feature.subscription.service.SubscriptionService;
@@ -62,7 +63,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         // Block if company already has an active subscription
         subscriptionRepository
-                .findActiveByCompanyId(companyId)
+                .findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE)
                 .ifPresent(
                         existing -> {
                             throw new ApiException(ApiErrorCode.SUBSCRIPTION_ALREADY_ACTIVE);

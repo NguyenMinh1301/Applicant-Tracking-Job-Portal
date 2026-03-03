@@ -32,7 +32,8 @@ public class PaymentExpiryTask {
     @Transactional
     public void expirePendingPayments() {
         var cutoff = Instant.now().minus(EXPIRY_MINUTES, ChronoUnit.MINUTES);
-        var expired = paymentTransactionRepository.findExpiredPending(cutoff);
+        var expired =
+                paymentTransactionRepository.findExpiredPending(cutoff, PaymentStatus.PENDING);
 
         if (expired.isEmpty()) {
             log.debug("No expired pending payments found");
