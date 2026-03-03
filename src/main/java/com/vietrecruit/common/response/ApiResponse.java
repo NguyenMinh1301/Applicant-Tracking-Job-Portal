@@ -2,7 +2,8 @@ package com.vietrecruit.common.response;
 
 import java.time.Instant;
 
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.exception.ApiException;
 
 import lombok.AllArgsConstructor;

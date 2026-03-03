@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.response.ApiResponse;
 
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;

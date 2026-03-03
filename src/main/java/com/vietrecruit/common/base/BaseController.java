@@ -3,7 +3,7 @@ package com.vietrecruit.common.base;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.response.ApiResponse;
 
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;

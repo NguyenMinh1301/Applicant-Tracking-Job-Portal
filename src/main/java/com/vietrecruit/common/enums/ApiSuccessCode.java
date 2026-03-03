@@ -1,4 +1,4 @@
-package com.vietrecruit.common.response;
+package com.vietrecruit.common.enums;
 
 import lombok.Getter;
 
@@ -39,7 +39,9 @@ public enum ApiSuccessCode {
 
     // Payment
     CHECKOUT_SUCCESS("CHECKOUT_SUCCESS", "Payment link created successfully"),
-    PAYMENT_STATUS_FETCH_SUCCESS("PAYMENT_STATUS_FETCH_SUCCESS", "Payment status retrieved successfully");
+    PAYMENT_STATUS_FETCH_SUCCESS("PAYMENT_STATUS_FETCH_SUCCESS", "Payment status retrieved successfully"),
+    TRANSACTION_HISTORY_FETCH_SUCCESS("TRANSACTION_HISTORY_FETCH_SUCCESS",
+            "Transaction history retrieved successfully");
 
     // spotless:on
     private final String code;

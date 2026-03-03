@@ -1,5 +1,7 @@
 package com.vietrecruit.common.exception;
 
+import com.vietrecruit.common.enums.ApiErrorCode;
+
 import lombok.Getter;
 
 @Getter

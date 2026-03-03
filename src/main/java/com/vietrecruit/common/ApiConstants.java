@@ -60,6 +60,14 @@ public final class ApiConstants {
         public static final String ROOT = API_VERSION + "/payment";
         public static final String CHECKOUT = "/checkout";
         public static final String PAYMENT_STATUS = "/payment-status/{orderCode}";
+        public static final String TRANSACTIONS = "/transactions";
+    }
+
+    public static final class AdminPayment {
+        private AdminPayment() {}
+
+        public static final String ROOT = ADMIN_PREFIX + "/payment";
+        public static final String TRANSACTIONS = "/transactions";
     }
 
     public static final class Webhook {
