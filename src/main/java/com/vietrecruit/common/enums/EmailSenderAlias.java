@@ -1,4 +1,4 @@
-package com.vietrecruit.feature.notification.dto;
+package com.vietrecruit.common.enums;
 
 import lombok.Getter;
 

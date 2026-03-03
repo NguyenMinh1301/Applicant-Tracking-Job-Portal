@@ -7,7 +7,7 @@ import com.resend.Resend;
 import com.resend.core.exception.ResendException;
 import com.resend.services.emails.model.CreateEmailOptions;
 import com.resend.services.emails.model.CreateEmailResponse;
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.notification.dto.EmailRequest;
 
