@@ -17,7 +17,7 @@ jobs:
   tests:
     env:
       TZ: Asia/Ho_Chi_Minh
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     name: Tests
     steps:
       - name: Checkout code
@@ -28,8 +28,8 @@ jobs:
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'corretto'
+          java-version: "21"
+          distribution: "corretto"
 
       - name: Cache Maven dependencies
         uses: actions/cache@v3
