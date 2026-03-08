@@ -22,9 +22,12 @@ import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.common.security.AuthCacheService;
 import com.vietrecruit.common.security.JwtService;
+import com.vietrecruit.feature.auth.dto.request.ChangePasswordRequest;
+import com.vietrecruit.feature.auth.dto.request.ForgotPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.LoginRequest;
 import com.vietrecruit.feature.auth.dto.request.RegisterRequest;
 import com.vietrecruit.feature.auth.dto.request.ResendOtpRequest;
+import com.vietrecruit.feature.auth.dto.request.ResetPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.VerifyOtpRequest;
 import com.vietrecruit.feature.auth.dto.response.LoginResponse;
 import com.vietrecruit.feature.auth.entity.RefreshToken;
@@ -428,5 +431,215 @@ class AuthServiceImplTest {
 
         assertFalse(testUser.getEmailVerified());
         assertNull(testUser.getEmailVerifiedAt());
+    }
+
+    // ── Change Password Tests ───────────────────────────────────────────
+
+    @Test
+    @DisplayName("Should change password, revoke tokens, and evict cache")
+    void changePassword_Success() {
+        ChangePasswordRequest request =
+                ChangePasswordRequest.builder()
+                        .currentPassword("oldPassword123")
+                        .newPassword("newPassword456")
+                        .build();
+
+        when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("oldPassword123", testUser.getPasswordHash()))
+                .thenReturn(true);
+        when(passwordEncoder.encode("newPassword456")).thenReturn("hashed-new-pwd");
+
+        authService.changePassword(testUser.getId(), request);
+
+        assertEquals("hashed-new-pwd", testUser.getPasswordHash());
+        verify(userRepository, times(1)).save(testUser);
+        verify(refreshTokenRepository, times(1)).revokeAllByUserId(testUser.getId());
+        verify(authCacheService, times(1)).evictUser(testUser.getId());
+    }
+
+    @Test
+    @DisplayName("Should throw AUTH_PASSWORD_MISMATCH when current password is wrong")
+    void changePassword_WrongCurrentPassword_ThrowsMismatch() {
+        ChangePasswordRequest request =
+                ChangePasswordRequest.builder()
+                        .currentPassword("wrongPassword")
+                        .newPassword("newPassword456")
+                        .build();
+
+        when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("wrongPassword", testUser.getPasswordHash()))
+                .thenReturn(false);
+
+        ApiException exception =
+                assertThrows(
+                        ApiException.class,
+                        () -> authService.changePassword(testUser.getId(), request));
+        assertEquals(ApiErrorCode.AUTH_PASSWORD_MISMATCH, exception.getErrorCode());
+
+        verify(userRepository, never()).save(any());
+        verify(refreshTokenRepository, never()).revokeAllByUserId(any());
+    }
+
+    @Test
+    @DisplayName("Should throw AUTH_PASSWORD_MISMATCH for OAuth-only user with null password hash")
+    void changePassword_NullPasswordHash_ThrowsMismatch() {
+        testUser.setPasswordHash(null);
+        ChangePasswordRequest request =
+                ChangePasswordRequest.builder()
+                        .currentPassword("anyPassword")
+                        .newPassword("newPassword456")
+                        .build();
+
+        when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
+
+        ApiException exception =
+                assertThrows(
+                        ApiException.class,
+                        () -> authService.changePassword(testUser.getId(), request));
+        assertEquals(ApiErrorCode.AUTH_PASSWORD_MISMATCH, exception.getErrorCode());
+    }
+
+    // ── Forgot Password Tests ───────────────────────────────────────────
+
+    @Test
+    @DisplayName("Should generate high-entropy token and send email with secure reset link")
+    void forgotPassword_ExistingUser_SendsEmailWithSecureToken() {
+        ForgotPasswordRequest request =
+                ForgotPasswordRequest.builder().email("test@example.com").build();
+
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+
+        authService.forgotPassword(request);
+
+        // Verify reset token stored (not OTP)
+        verify(authCacheService, times(1))
+                .storeResetToken(
+                        eq("test@example.com"), anyString(), eq(testUser.getId()), eq(900L));
+        verify(authCacheService, times(1)).setCooldown(eq("test@example.com"), eq(60L));
+
+        // Verify OTP storage was NOT used
+        verify(authCacheService, never())
+                .storeOtp(anyString(), anyString(), any(java.util.UUID.class), anyLong());
+
+        ArgumentCaptor<EmailRequest> emailCaptor = ArgumentCaptor.forClass(EmailRequest.class);
+        verify(notificationService, times(1)).send(emailCaptor.capture());
+
+        EmailRequest sentEmail = emailCaptor.getValue();
+        assertEquals("forgot-password", sentEmail.templateId());
+
+        java.util.Map<String, Object> model = sentEmail.templateVariables();
+        String resetLink = (String) model.get("resetLink");
+        assertNotNull(resetLink);
+        assertFalse(resetLink.contains("placeholder"));
+        assertTrue(resetLink.contains("/reset-password?token="));
+        assertTrue(resetLink.contains("&email=test@example.com"));
+
+        // Extract token from link and verify it's 64 hex chars (32 bytes)
+        String token =
+                resetLink.substring(resetLink.indexOf("token=") + 6, resetLink.indexOf("&email"));
+        assertEquals(64, token.length(), "Reset token must be 64 hex characters (32 bytes)");
+        assertTrue(token.matches("[0-9a-f]{64}"), "Reset token must be lowercase hex");
+    }
+
+    // ── Reset Password Tests ───────────────────────────────────────────
+
+    @Test
+    @DisplayName("Should reset password, delete token, revoke tokens, and evict cache")
+    void resetPassword_Success() {
+        String rawToken = "a".repeat(64);
+        String tokenHash = sha256Helper(rawToken);
+
+        ResetPasswordRequest request =
+                ResetPasswordRequest.builder()
+                        .email("test@example.com")
+                        .token(rawToken)
+                        .newPassword("newSecurePassword123")
+                        .build();
+
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(authCacheService.getResetTokenContext("test@example.com"))
+                .thenReturn(new AuthCacheService.ResetTokenContext(tokenHash, testUser.getId()));
+        when(passwordEncoder.encode("newSecurePassword123")).thenReturn("hashed-new-pwd");
+
+        authService.resetPassword(request);
+
+        assertEquals("hashed-new-pwd", testUser.getPasswordHash());
+        verify(userRepository, times(1)).save(testUser);
+        verify(authCacheService, times(1)).deleteResetToken("test@example.com");
+        verify(refreshTokenRepository, times(1)).revokeAllByUserId(testUser.getId());
+        verify(authCacheService, times(1)).evictUser(testUser.getId());
+    }
+
+    @Test
+    @DisplayName("Should throw AUTH_RESET_TOKEN_INVALID when token expired (no context in Redis)")
+    void resetPassword_ExpiredToken_Throws() {
+        ResetPasswordRequest request =
+                ResetPasswordRequest.builder()
+                        .email("test@example.com")
+                        .token("sometoken")
+                        .newPassword("newPassword123")
+                        .build();
+
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(authCacheService.getResetTokenContext("test@example.com")).thenReturn(null);
+
+        ApiException exception =
+                assertThrows(ApiException.class, () -> authService.resetPassword(request));
+        assertEquals(ApiErrorCode.AUTH_RESET_TOKEN_INVALID, exception.getErrorCode());
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should throw AUTH_RESET_TOKEN_INVALID when token hash does not match")
+    void resetPassword_InvalidToken_Throws() {
+        ResetPasswordRequest request =
+                ResetPasswordRequest.builder()
+                        .email("test@example.com")
+                        .token("wrongtoken")
+                        .newPassword("newPassword123")
+                        .build();
+
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(authCacheService.getResetTokenContext("test@example.com"))
+                .thenReturn(
+                        new AuthCacheService.ResetTokenContext(
+                                "correct-hash-value", testUser.getId()));
+
+        ApiException exception =
+                assertThrows(ApiException.class, () -> authService.resetPassword(request));
+        assertEquals(ApiErrorCode.AUTH_RESET_TOKEN_INVALID, exception.getErrorCode());
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName(
+            "Should throw AUTH_RESET_TOKEN_INVALID when user not found — no information leakage")
+    void resetPassword_UserNotFound_ThrowsGenericError() {
+        ResetPasswordRequest request =
+                ResetPasswordRequest.builder()
+                        .email("nonexistent@example.com")
+                        .token("sometoken")
+                        .newPassword("newPassword123")
+                        .build();
+
+        when(userRepository.findByEmail("nonexistent@example.com")).thenReturn(Optional.empty());
+
+        ApiException exception =
+                assertThrows(ApiException.class, () -> authService.resetPassword(request));
+        assertEquals(ApiErrorCode.AUTH_RESET_TOKEN_INVALID, exception.getErrorCode());
+    }
+
+    // ── Test Helpers ───────────────────────────────────────────────────
+
+    private static String sha256Helper(String input) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(hash);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }
