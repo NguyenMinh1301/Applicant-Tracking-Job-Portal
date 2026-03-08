@@ -38,6 +38,7 @@ public class SecurityConfig {
         "/vietrecruit/auth/register",
         "/vietrecruit/auth/refresh",
         "/vietrecruit/auth/forgot-password",
+        "/vietrecruit/auth/reset-password",
         "/vietrecruit/auth/verify-otp",
         "/vietrecruit/auth/resend-otp",
     };

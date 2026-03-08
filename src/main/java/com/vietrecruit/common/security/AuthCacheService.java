@@ -21,6 +21,7 @@ public class AuthCacheService {
     private static final String OTP_KEY_PREFIX = "auth:verify:otp:";
     private static final String OTP_COOLDOWN_PREFIX = "auth:verify:cooldown:";
     private static final String OTP_LOCKOUT_PREFIX = "auth:verify:lockout:";
+    private static final String RESET_TOKEN_PREFIX = "auth:reset:";
 
     private final StringRedisTemplate redisTemplate;
 
@@ -123,4 +124,30 @@ public class AuthCacheService {
     // ── OTP Context Record ──────────────────────────────────────────────
 
     public record OtpContext(String code, UUID userId, int attempts) {}
+
+    // ── Password Reset Token ────────────────────────────────────────────
+
+    public void storeResetToken(String email, String tokenHash, UUID userId, long ttlSeconds) {
+        String key = RESET_TOKEN_PREFIX + email.toLowerCase();
+        Map<String, String> fields = Map.of("tokenHash", tokenHash, "userId", userId.toString());
+        redisTemplate.opsForHash().putAll(key, fields);
+        redisTemplate.expire(key, ttlSeconds, TimeUnit.SECONDS);
+    }
+
+    public ResetTokenContext getResetTokenContext(String email) {
+        String key = RESET_TOKEN_PREFIX + email.toLowerCase();
+        Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
+        if (entries.isEmpty()) {
+            return null;
+        }
+        return new ResetTokenContext(
+                (String) entries.get("tokenHash"), UUID.fromString((String) entries.get("userId")));
+    }
+
+    public void deleteResetToken(String email) {
+        String key = RESET_TOKEN_PREFIX + email.toLowerCase();
+        redisTemplate.delete(key);
+    }
+
+    public record ResetTokenContext(String tokenHash, UUID userId) {}
 }
