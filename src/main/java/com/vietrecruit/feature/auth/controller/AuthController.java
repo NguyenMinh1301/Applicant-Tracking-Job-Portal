@@ -14,10 +14,13 @@ import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.common.base.BaseController;
 import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.response.ApiResponse;
+import com.vietrecruit.common.security.SecurityUtils;
+import com.vietrecruit.feature.auth.dto.request.ChangePasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.ForgotPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.LoginRequest;
 import com.vietrecruit.feature.auth.dto.request.RegisterRequest;
 import com.vietrecruit.feature.auth.dto.request.ResendOtpRequest;
+import com.vietrecruit.feature.auth.dto.request.ResetPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.TokenRefreshRequest;
 import com.vietrecruit.feature.auth.dto.request.VerifyOtpRequest;
 import com.vietrecruit.feature.auth.dto.response.LoginResponse;
@@ -100,6 +103,34 @@ public class AuthController extends BaseController {
             @Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request);
         return ResponseEntity.ok(ApiResponse.success(ApiSuccessCode.AUTH_FORGOT_SUCCESS));
+    }
+
+    @Operation(
+            summary = "Reset Password",
+            description = "Resets the user's password using a token from the password reset email")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Password reset successfully")
+    @RateLimiter(name = "authStrict", fallbackMethod = "rateLimit")
+    @PostMapping(ApiConstants.Auth.RESET_PASSWORD)
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.success(ApiSuccessCode.AUTH_RESET_SUCCESS));
+    }
+
+    @Operation(
+            summary = "Change Password",
+            description = "Changes the authenticated user's password and revokes all sessions")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Password changed successfully")
+    @RateLimiter(name = "authModerate", fallbackMethod = "rateLimit")
+    @PostMapping(ApiConstants.Auth.CHANGE_PASSWORD)
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(SecurityUtils.getCurrentUserId(), request);
+        return ResponseEntity.ok(ApiResponse.success(ApiSuccessCode.AUTH_CHANGE_PASSWORD_SUCCESS));
     }
 
     @Operation(

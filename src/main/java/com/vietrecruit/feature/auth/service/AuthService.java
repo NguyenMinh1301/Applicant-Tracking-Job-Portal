@@ -1,9 +1,13 @@
 package com.vietrecruit.feature.auth.service;
 
+import java.util.UUID;
+
+import com.vietrecruit.feature.auth.dto.request.ChangePasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.ForgotPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.LoginRequest;
 import com.vietrecruit.feature.auth.dto.request.RegisterRequest;
 import com.vietrecruit.feature.auth.dto.request.ResendOtpRequest;
+import com.vietrecruit.feature.auth.dto.request.ResetPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.TokenRefreshRequest;
 import com.vietrecruit.feature.auth.dto.request.VerifyOtpRequest;
 import com.vietrecruit.feature.auth.dto.response.LoginResponse;
@@ -20,6 +24,10 @@ public interface AuthService {
     void logout(String accessToken);
 
     void forgotPassword(ForgotPasswordRequest request);
+
+    void changePassword(UUID userId, ChangePasswordRequest request);
+
+    void resetPassword(ResetPasswordRequest request);
 
     void verifyOtp(VerifyOtpRequest request);
 

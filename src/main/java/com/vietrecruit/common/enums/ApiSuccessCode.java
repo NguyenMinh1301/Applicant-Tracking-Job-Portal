@@ -20,6 +20,7 @@ public enum ApiSuccessCode {
     AUTH_RESET_SUCCESS("AUTH_RESET_SUCCESS", "Password reset successful"),
     AUTH_RESET_TOKEN_VALID("AUTH_RESET_TOKEN_VALID", "Reset token validated, please provide a new password"),
     AUTH_ME_SUCCESS("AUTH_ME_SUCCESS", "Current user profile retrieved successfully"),
+    AUTH_CHANGE_PASSWORD_SUCCESS("AUTH_CHANGE_PASSWORD_SUCCESS", "Password changed successfully"),
 
     // User
     USER_CREATE_SUCCESS("USER_CREATE_SUCCESS", "User created successfully"),

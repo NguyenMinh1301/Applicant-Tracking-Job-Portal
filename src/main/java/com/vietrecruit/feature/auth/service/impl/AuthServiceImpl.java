@@ -17,10 +17,12 @@ import com.vietrecruit.common.enums.EmailSenderAlias;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.common.security.AuthCacheService;
 import com.vietrecruit.common.security.JwtService;
+import com.vietrecruit.feature.auth.dto.request.ChangePasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.ForgotPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.LoginRequest;
 import com.vietrecruit.feature.auth.dto.request.RegisterRequest;
 import com.vietrecruit.feature.auth.dto.request.ResendOtpRequest;
+import com.vietrecruit.feature.auth.dto.request.ResetPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.TokenRefreshRequest;
 import com.vietrecruit.feature.auth.dto.request.VerifyOtpRequest;
 import com.vietrecruit.feature.auth.dto.response.LoginResponse;
@@ -57,6 +59,8 @@ public class AuthServiceImpl implements AuthService {
     private static final int MAX_OTP_ATTEMPTS = 5;
     private static final int OTP_BOUND_MIN = 10_000_000;
     private static final int OTP_BOUND_MAX = 100_000_000;
+    private static final long RESET_TOKEN_TTL_SECONDS = 900;
+    private static final int RESET_TOKEN_BYTES = 32;
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -392,15 +396,26 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
         userRepository
                 .findByEmail(request.getEmail())
                 .ifPresent(
                         user -> {
                             log.info("Password reset requested for user: {}", user.getId());
+
+                            String rawToken = generateResetToken();
+                            authCacheService.storeResetToken(
+                                    request.getEmail(),
+                                    sha256(rawToken),
+                                    user.getId(),
+                                    RESET_TOKEN_TTL_SECONDS);
+                            authCacheService.setCooldown(request.getEmail(), OTP_COOLDOWN_SECONDS);
+
                             String resetLink =
                                     String.format(
-                                            "%s/reset-password?token=placeholder", frontendBaseUrl);
+                                            "%s/reset-password?token=%s&email=%s",
+                                            frontendBaseUrl, rawToken, request.getEmail());
 
                             notificationService.send(
                                     new EmailRequest(
@@ -411,6 +426,58 @@ public class AuthServiceImpl implements AuthService {
                                             "forgot-password",
                                             Map.of("resetLink", resetLink)));
                         });
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        String email = request.getEmail();
+
+        User user =
+                userRepository
+                        .findByEmail(email)
+                        .orElseThrow(() -> new ApiException(ApiErrorCode.AUTH_RESET_TOKEN_INVALID));
+
+        AuthCacheService.ResetTokenContext context = authCacheService.getResetTokenContext(email);
+        if (context == null) {
+            throw new ApiException(ApiErrorCode.AUTH_RESET_TOKEN_INVALID);
+        }
+
+        String incomingHash = sha256(request.getToken());
+        if (!incomingHash.equals(context.tokenHash())) {
+            throw new ApiException(ApiErrorCode.AUTH_RESET_TOKEN_INVALID);
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        authCacheService.deleteResetToken(email);
+        refreshTokenRepository.revokeAllByUserId(user.getId());
+        authCacheService.evictUser(user.getId());
+
+        log.info("Password reset completed for user: {}. All sessions revoked.", user.getId());
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(java.util.UUID userId, ChangePasswordRequest request) {
+        User user =
+                userRepository
+                        .findById(userId)
+                        .orElseThrow(() -> new ApiException(ApiErrorCode.AUTH_INVALID_CREDENTIALS));
+
+        if (user.getPasswordHash() == null
+                || !passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new ApiException(ApiErrorCode.AUTH_PASSWORD_MISMATCH);
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        refreshTokenRepository.revokeAllByUserId(userId);
+        authCacheService.evictUser(userId);
+
+        log.info("Password changed for user: {}. All sessions revoked.", userId);
     }
 
     private LoginResponse buildLoginResponse(User user) {
@@ -479,6 +546,18 @@ public class AuthServiceImpl implements AuthService {
     private String generateOtp() {
         int code = secureRandom.nextInt(OTP_BOUND_MIN, OTP_BOUND_MAX);
         return String.valueOf(code);
+    }
+
+    /**
+     * Generates a cryptographically secure reset token (32 bytes = 256 bits, hex-encoded). Used
+     * exclusively for password reset links. Email verification OTP uses the separate {@link
+     * #generateOtp()} method which produces a short numeric code suitable for on-screen entry with
+     * rate-limited retries.
+     */
+    private String generateResetToken() {
+        byte[] bytes = new byte[RESET_TOKEN_BYTES];
+        secureRandom.nextBytes(bytes);
+        return java.util.HexFormat.of().formatHex(bytes);
     }
 
     private String sha256(String input) {
