@@ -15,7 +15,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import com.vietrecruit.feature.job.enums.JobStatus;
 
@@ -75,6 +77,7 @@ public class Job {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
     private JobStatus status = JobStatus.DRAFT;
 
