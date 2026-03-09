@@ -30,6 +30,7 @@ services:
       APP_BASE_URL: ${APP_BASE_URL}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       ELASTICSEARCH_URI: http://vr-elasticsearch:9200
+      LOGGING_LOGSTASH_HOST: vr-logstash
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL}
       OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL}
@@ -46,15 +47,18 @@ services:
       PAYOS_LOG_LEVEL: ${PAYOS_LOG_LEVEL}
       PAYOS_RETURN_URL: ${PAYOS_RETURN_URL}
       PAYOS_CANCEL_URL: ${PAYOS_CANCEL_URL}
+      JAVA_TOOL_OPTIONS: "-Xms512m -Xmx2g"
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
-    deploy:
-      resources:
-        limits:
-          memory: 1G
+      kafka:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      logstash:
+        condition: service_healthy
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1" ]
       interval: 15s
@@ -87,10 +91,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    deploy:
-      resources:
-        limits:
-          memory: 512M
 
   redis:
     image: redis:7-alpine
@@ -106,10 +106,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 256M
 
   kafka:
     image: confluentinc/cp-kafka:7.6.1
@@ -132,6 +128,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       CLUSTER_ID: 'VlJDbHVzdGVySWQxMjM0NQ'
       KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: "-Xms1g -Xmx4g"
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
@@ -140,10 +137,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
-    deploy:
-      resources:
-        limits:
-          memory: 1G
 
   kafka-ui:
     container_name: vr-kafka-ui
@@ -198,10 +191,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 120s
-    deploy:
-      resources:
-        limits:
-          memory: 1G
 
   debezium-ui:
     image: debezium/debezium-ui:2.5
@@ -255,10 +244,6 @@ services:
       - "9091:9090"
     networks:
       - vr-network
-    deploy:
-      resources:
-        limits:
-          memory: 256M
 
   grafana:
     image: grafana/grafana
@@ -275,10 +260,6 @@ services:
       - "3000:3000"
     networks:
       - vr-network
-    deploy:
-      resources:
-        limits:
-          memory: 256M
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -328,7 +309,7 @@ services:
       - "9200:9200"
       - "9300:9300"
     environment:
-      - ES_JAVA_OPTS=-Xmx1g -Xms1g
+      - ES_JAVA_OPTS=-Xms2g -Xmx4g
       - discovery.type=single-node
     networks:
       - vr-network
@@ -338,10 +319,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
-    deploy:
-      resources:
-        limits:
-          memory: 2G
 
   logstash:
     image: logstash:7.17.25
@@ -355,11 +332,17 @@ services:
       - "5022:5000/udp"
       - "9600:9600"
     environment:
-      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+      LS_JAVA_OPTS: "-Xms512m -Xmx1g"
     networks:
       - vr-network
     depends_on:
       - elasticsearch
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:9600 || exit 1" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   kibana:
     image: kibana:7.17.25
