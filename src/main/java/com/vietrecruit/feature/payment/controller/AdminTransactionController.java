@@ -2,8 +2,10 @@ package com.vietrecruit.feature.payment.controller;
 
 import java.util.UUID;
 
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,6 +22,8 @@ import com.vietrecruit.feature.payment.service.TransactionHistoryService;
 
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -40,10 +44,24 @@ public class AdminTransactionController {
                             + "Optionally filter by companyId.")
     @PreAuthorize("hasAuthority('TRANSACTION:VIEW_ALL')")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @Parameters({
+        @Parameter(name = "page", description = "Page number (0-based)", example = "0"),
+        @Parameter(name = "size", description = "Page size", example = "20"),
+        @Parameter(
+                name = "sort",
+                description = "Sort field and direction",
+                example = "createdAt,desc")
+    })
     @GetMapping(ApiConstants.AdminPayment.TRANSACTIONS)
     public ResponseEntity<ApiResponse<Page<TransactionHistoryResponse>>> getAllTransactions(
             @RequestParam(required = false) UUID companyId,
-            @PageableDefault(size = 20) Pageable pageable) {
+            @ParameterObject
+                    @PageableDefault(
+                            page = 0,
+                            size = 20,
+                            sort = "createdAt",
+                            direction = Sort.Direction.DESC)
+                    Pageable pageable) {
 
         Page<TransactionHistoryResponse> result;
         if (companyId != null) {

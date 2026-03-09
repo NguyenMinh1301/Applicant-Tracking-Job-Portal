@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import jakarta.validation.Valid;
 
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -34,6 +35,8 @@ import com.vietrecruit.feature.job.service.JobService;
 
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -105,9 +108,22 @@ public class JobController extends BaseController {
             summary = "List Jobs",
             description = "Lists all jobs for the employer's company (paginated)")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @Parameters({
+        @Parameter(name = "page", description = "Page number (0-based)", example = "0"),
+        @Parameter(name = "size", description = "Page size", example = "20"),
+        @Parameter(
+                name = "sort",
+                description = "Sort field and direction",
+                example = "createdAt,desc")
+    })
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<JobSummaryResponse>>> listJobs(
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            @ParameterObject
+                    @PageableDefault(
+                            page = 0,
+                            size = 20,
+                            sort = "createdAt",
+                            direction = Sort.Direction.DESC)
                     Pageable pageable) {
         var companyId = resolveCompanyId();
         var page = jobService.listJobs(companyId, pageable).map(jobMapper::toJobSummaryResponse);
@@ -134,9 +150,22 @@ public class JobController extends BaseController {
             summary = "List Public Jobs",
             description = "Lists published jobs with optional filters (public)")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @Parameters({
+        @Parameter(name = "page", description = "Page number (0-based)", example = "0"),
+        @Parameter(name = "size", description = "Page size", example = "20"),
+        @Parameter(
+                name = "sort",
+                description = "Sort field and direction",
+                example = "createdAt,desc")
+    })
     @GetMapping(ApiConstants.Job.PUBLIC_ROOT)
     public ResponseEntity<ApiResponse<PageResponse<JobSummaryResponse>>> listPublicJobs(
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            @ParameterObject
+                    @PageableDefault(
+                            page = 0,
+                            size = 20,
+                            sort = "createdAt",
+                            direction = Sort.Direction.DESC)
                     Pageable pageable,
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) UUID locationId,

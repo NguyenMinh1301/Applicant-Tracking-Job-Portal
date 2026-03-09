@@ -4,7 +4,9 @@ import java.util.UUID;
 
 import jakarta.validation.Valid;
 
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,6 +30,8 @@ import com.vietrecruit.feature.user.dto.response.AdminUserResponse;
 import com.vietrecruit.feature.user.service.AdminUserService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -71,9 +75,23 @@ public class AdminUserController extends BaseController {
             responseCode = "200",
             description = "Users listed successfully")
     @PreAuthorize("hasAuthority('USER:MANAGE')")
+    @Parameters({
+        @Parameter(name = "page", description = "Page number (0-based)", example = "0"),
+        @Parameter(name = "size", description = "Page size", example = "20"),
+        @Parameter(
+                name = "sort",
+                description = "Sort field and direction",
+                example = "createdAt,desc")
+    })
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<AdminUserResponse>>> list(
-            @PageableDefault(size = 20) Pageable pageable) {
+            @ParameterObject
+                    @PageableDefault(
+                            page = 0,
+                            size = 20,
+                            sort = "createdAt",
+                            direction = Sort.Direction.DESC)
+                    Pageable pageable) {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         ApiSuccessCode.USER_LIST_SUCCESS,

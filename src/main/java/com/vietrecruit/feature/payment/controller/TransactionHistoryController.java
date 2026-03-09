@@ -1,7 +1,9 @@
 package com.vietrecruit.feature.payment.controller;
 
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +19,8 @@ import com.vietrecruit.feature.payment.service.TransactionHistoryService;
 
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -35,9 +39,23 @@ public class TransactionHistoryController extends BaseController {
             description =
                     "Retrieves paginated transaction history for the authenticated user's company")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @Parameters({
+        @Parameter(name = "page", description = "Page number (0-based)", example = "0"),
+        @Parameter(name = "size", description = "Page size", example = "20"),
+        @Parameter(
+                name = "sort",
+                description = "Sort field and direction",
+                example = "createdAt,desc")
+    })
     @GetMapping(ApiConstants.Payment.TRANSACTIONS)
     public ResponseEntity<ApiResponse<Page<TransactionHistoryResponse>>> getTransactions(
-            @PageableDefault(size = 20) Pageable pageable) {
+            @ParameterObject
+                    @PageableDefault(
+                            page = 0,
+                            size = 20,
+                            sort = "createdAt",
+                            direction = Sort.Direction.DESC)
+                    Pageable pageable) {
         var companyId = resolveCompanyId();
         return ResponseEntity.ok(
                 ApiResponse.success(
