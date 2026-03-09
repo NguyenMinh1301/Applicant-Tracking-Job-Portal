@@ -2,14 +2,21 @@ package com.vietrecruit.feature.job.service.impl;
 
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
+import com.vietrecruit.feature.job.dto.request.JobCreateRequest;
+import com.vietrecruit.feature.job.dto.request.JobUpdateRequest;
 import com.vietrecruit.feature.job.entity.Job;
 import com.vietrecruit.feature.job.enums.JobStatus;
+import com.vietrecruit.feature.job.mapper.JobMapper;
 import com.vietrecruit.feature.job.repository.JobRepository;
+import com.vietrecruit.feature.job.repository.JobSpecification;
 import com.vietrecruit.feature.job.service.JobService;
 import com.vietrecruit.feature.subscription.service.QuotaGuard;
 
@@ -23,18 +30,29 @@ import lombok.extern.slf4j.Slf4j;
 public class JobServiceImpl implements JobService {
 
     private final JobRepository jobRepository;
+    private final JobMapper jobMapper;
     private final QuotaGuard quotaGuard;
 
     @Override
     @Transactional
-    public Job createJob(UUID companyId, String title, String description) {
-        var job =
-                Job.builder()
-                        .companyId(companyId)
-                        .title(title)
-                        .description(description)
-                        .status(JobStatus.DRAFT)
-                        .build();
+    public Job createJob(UUID companyId, UUID createdBy, JobCreateRequest request) {
+        var job = jobMapper.toEntity(request);
+        job.setCompanyId(companyId);
+        job.setCreatedBy(createdBy);
+        job.setStatus(JobStatus.DRAFT);
+        return jobRepository.save(job);
+    }
+
+    @Override
+    @Transactional
+    public Job updateJob(UUID companyId, UUID jobId, JobUpdateRequest request) {
+        var job = findJobByIdAndCompany(companyId, jobId);
+
+        if (job.getStatus() != JobStatus.DRAFT) {
+            throw new ApiException(ApiErrorCode.BAD_REQUEST, "Only DRAFT jobs can be edited");
+        }
+
+        jobMapper.updateEntity(request, job);
         return jobRepository.save(job);
     }
 
@@ -79,14 +97,52 @@ public class JobServiceImpl implements JobService {
         return saved;
     }
 
+    @Override
+    public Job getJob(UUID companyId, UUID jobId) {
+        return findJobByIdAndCompany(companyId, jobId);
+    }
+
+    @Override
+    public Page<Job> listJobs(UUID companyId, Pageable pageable) {
+        return jobRepository.findByCompanyIdAndDeletedAtIsNull(companyId, pageable);
+    }
+
+    @Override
+    public Page<Job> listPublicJobs(
+            Pageable pageable, UUID categoryId, UUID locationId, String keyword) {
+        Specification<Job> spec = JobSpecification.isPublished();
+
+        if (categoryId != null) {
+            spec = spec.and(JobSpecification.hasCategoryId(categoryId));
+        }
+        if (locationId != null) {
+            spec = spec.and(JobSpecification.hasLocationId(locationId));
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            spec = spec.and(JobSpecification.titleContains(keyword));
+        }
+
+        return jobRepository.findAll(spec, pageable);
+    }
+
+    @Override
+    public Job getPublicJob(UUID jobId) {
+        return jobRepository
+                .findByIdAndStatusAndDeletedAtIsNull(jobId, JobStatus.PUBLISHED)
+                .orElseThrow(
+                        () -> new ApiException(
+                                ApiErrorCode.NOT_FOUND,
+                                "Job not found or is not published"));
+    }
+
     private Job findJobByIdAndCompany(UUID companyId, UUID jobId) {
         return jobRepository
                 .findById(jobId)
                 .filter(j -> j.getCompanyId().equals(companyId))
+                .filter(j -> j.getDeletedAt() == null)
                 .orElseThrow(
-                        () ->
-                                new ApiException(
-                                        ApiErrorCode.NOT_FOUND,
-                                        "Job not found or does not belong to this company"));
+                        () -> new ApiException(
+                                ApiErrorCode.NOT_FOUND,
+                                "Job not found or does not belong to this company"));
     }
 }
