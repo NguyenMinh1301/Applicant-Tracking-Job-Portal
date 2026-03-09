@@ -17,8 +17,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
+import com.vietrecruit.feature.job.dto.request.JobCreateRequest;
 import com.vietrecruit.feature.job.entity.Job;
 import com.vietrecruit.feature.job.enums.JobStatus;
+import com.vietrecruit.feature.job.mapper.JobMapper;
 import com.vietrecruit.feature.job.repository.JobRepository;
 import com.vietrecruit.feature.subscription.service.QuotaGuard;
 
@@ -26,16 +28,19 @@ import com.vietrecruit.feature.subscription.service.QuotaGuard;
 class JobServiceImplTest {
 
     @Mock private JobRepository jobRepository;
+    @Mock private JobMapper jobMapper;
     @Mock private QuotaGuard quotaGuard;
     @InjectMocks private JobServiceImpl jobService;
 
     private UUID companyId;
+    private UUID userId;
     private UUID jobId;
     private Job draftJob;
 
     @BeforeEach
     void setUp() {
         companyId = UUID.randomUUID();
+        userId = UUID.randomUUID();
         jobId = UUID.randomUUID();
         draftJob =
                 Job.builder()
@@ -50,9 +55,12 @@ class JobServiceImplTest {
     @Test
     @DisplayName("Should create job in DRAFT status")
     void createJob_Draft() {
+        var request = JobCreateRequest.builder().title("Title").description("Desc").build();
+        when(jobMapper.toEntity(request))
+                .thenReturn(Job.builder().title("Title").description("Desc").build());
         when(jobRepository.save(any(Job.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        var job = jobService.createJob(companyId, "Title", "Desc");
+        var job = jobService.createJob(companyId, userId, request);
 
         assertEquals(JobStatus.DRAFT, job.getStatus());
         assertEquals(companyId, job.getCompanyId());
