@@ -130,9 +130,10 @@ public class JobServiceImpl implements JobService {
         return jobRepository
                 .findByIdAndStatusAndDeletedAtIsNull(jobId, JobStatus.PUBLISHED)
                 .orElseThrow(
-                        () -> new ApiException(
-                                ApiErrorCode.NOT_FOUND,
-                                "Job not found or is not published"));
+                        () ->
+                                new ApiException(
+                                        ApiErrorCode.NOT_FOUND,
+                                        "Job not found or is not published"));
     }
 
     private Job findJobByIdAndCompany(UUID companyId, UUID jobId) {
@@ -141,8 +142,9 @@ public class JobServiceImpl implements JobService {
                 .filter(j -> j.getCompanyId().equals(companyId))
                 .filter(j -> j.getDeletedAt() == null)
                 .orElseThrow(
-                        () -> new ApiException(
-                                ApiErrorCode.NOT_FOUND,
-                                "Job not found or does not belong to this company"));
+                        () ->
+                                new ApiException(
+                                        ApiErrorCode.NOT_FOUND,
+                                        "Job not found or does not belong to this company"));
     }
 }

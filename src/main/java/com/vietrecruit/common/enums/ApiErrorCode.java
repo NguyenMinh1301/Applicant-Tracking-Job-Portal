@@ -75,7 +75,10 @@ public enum ApiErrorCode {
             HttpStatus.CONFLICT),
     PAYMENT_EXPIRED("PAYMENT_EXPIRED", "Payment link has expired", HttpStatus.GONE),
     PAYMENT_ACTIVATION_FAILED("PAYMENT_ACTIVATION_FAILED",
-            "Subscription activation failed after payment", HttpStatus.INTERNAL_SERVER_ERROR);
+            "Subscription activation failed after payment", HttpStatus.INTERNAL_SERVER_ERROR),
+
+    // Generic
+    CONFLICT("CONFLICT", "Resource already exists", HttpStatus.CONFLICT);
 
     // spotless:on
     private final String code;

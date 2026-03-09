@@ -90,4 +90,38 @@ public final class ApiConstants {
         public static final String PUBLIC_ROOT = "/public";
         public static final String PUBLIC_GET = "/public/{id}";
     }
+
+    public static final class Company {
+        private Company() {}
+
+        public static final String ROOT = API_VERSION + "/companies";
+        public static final String ME = "/me";
+    }
+
+    public static final class Department {
+        private Department() {}
+
+        public static final String ROOT = API_VERSION + "/departments";
+        public static final String GET = "/{id}";
+        public static final String UPDATE = "/{id}";
+        public static final String DELETE = "/{id}";
+    }
+
+    public static final class Location {
+        private Location() {}
+
+        public static final String ROOT = API_VERSION + "/locations";
+        public static final String GET = "/{id}";
+        public static final String UPDATE = "/{id}";
+        public static final String DELETE = "/{id}";
+    }
+
+    public static final class Category {
+        private Category() {}
+
+        public static final String ROOT = API_VERSION + "/categories";
+        public static final String GET = "/{id}";
+        public static final String UPDATE = "/{id}";
+        public static final String DELETE = "/{id}";
+    }
 }

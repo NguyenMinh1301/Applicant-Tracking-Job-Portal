@@ -50,7 +50,32 @@ public enum ApiSuccessCode {
     JOB_PUBLISH_SUCCESS("JOB_PUBLISH_SUCCESS", "Job published successfully"),
     JOB_CLOSE_SUCCESS("JOB_CLOSE_SUCCESS", "Job closed successfully"),
     JOB_FETCH_SUCCESS("JOB_FETCH_SUCCESS", "Job retrieved successfully"),
-    JOB_LIST_SUCCESS("JOB_LIST_SUCCESS", "Job list retrieved successfully");
+    JOB_LIST_SUCCESS("JOB_LIST_SUCCESS", "Job list retrieved successfully"),
+
+    // Company
+    COMPANY_FETCH_SUCCESS("COMPANY_FETCH_SUCCESS", "Company retrieved successfully"),
+    COMPANY_UPDATE_SUCCESS("COMPANY_UPDATE_SUCCESS", "Company updated successfully"),
+
+    // Department
+    DEPARTMENT_CREATE_SUCCESS("DEPARTMENT_CREATE_SUCCESS", "Department created successfully"),
+    DEPARTMENT_UPDATE_SUCCESS("DEPARTMENT_UPDATE_SUCCESS", "Department updated successfully"),
+    DEPARTMENT_DELETE_SUCCESS("DEPARTMENT_DELETE_SUCCESS", "Department deleted successfully"),
+    DEPARTMENT_FETCH_SUCCESS("DEPARTMENT_FETCH_SUCCESS", "Department retrieved successfully"),
+    DEPARTMENT_LIST_SUCCESS("DEPARTMENT_LIST_SUCCESS", "Department list retrieved successfully"),
+
+    // Location
+    LOCATION_CREATE_SUCCESS("LOCATION_CREATE_SUCCESS", "Location created successfully"),
+    LOCATION_UPDATE_SUCCESS("LOCATION_UPDATE_SUCCESS", "Location updated successfully"),
+    LOCATION_DELETE_SUCCESS("LOCATION_DELETE_SUCCESS", "Location deleted successfully"),
+    LOCATION_FETCH_SUCCESS("LOCATION_FETCH_SUCCESS", "Location retrieved successfully"),
+    LOCATION_LIST_SUCCESS("LOCATION_LIST_SUCCESS", "Location list retrieved successfully"),
+
+    // Category
+    CATEGORY_CREATE_SUCCESS("CATEGORY_CREATE_SUCCESS", "Category created successfully"),
+    CATEGORY_UPDATE_SUCCESS("CATEGORY_UPDATE_SUCCESS", "Category updated successfully"),
+    CATEGORY_DELETE_SUCCESS("CATEGORY_DELETE_SUCCESS", "Category deleted successfully"),
+    CATEGORY_FETCH_SUCCESS("CATEGORY_FETCH_SUCCESS", "Category retrieved successfully"),
+    CATEGORY_LIST_SUCCESS("CATEGORY_LIST_SUCCESS", "Category list retrieved successfully");
 
     // spotless:on
     private final String code;
