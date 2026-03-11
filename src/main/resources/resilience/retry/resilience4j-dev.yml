@@ -13,3 +13,10 @@ resilience4j:
         enableExponentialBackoff: true
         retryExceptions:
           - java.lang.RuntimeException
+      r2Upload:
+        maxAttempts: 2
+        waitDuration: 500ms
+        exponentialBackoffMultiplier: 2
+        enableExponentialBackoff: true
+        retryExceptions:
+          - software.amazon.awssdk.core.exception.SdkException

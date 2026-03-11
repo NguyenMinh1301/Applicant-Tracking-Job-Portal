@@ -108,8 +108,6 @@
 			<artifactId>spring-boot-starter-data-redis</artifactId>
 		</dependency>
 
-
-
 		<!-- JPA -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -165,13 +163,6 @@
 			<artifactId>flyway-database-postgresql</artifactId>
 			<version>11.10.0</version>
 		</dependency>
-
-		<!-- Cloudinary -->
-		<!--       <dependency>-->
-		<!--          <groupId>com.cloudinary</groupId>-->
-		<!--          <artifactId>cloudinary-http44</artifactId>-->
-		<!--          <version>1.39.0</version>-->
-		<!--       </dependency>-->
 
 		<!-- MapStruct -->
 		<dependency>

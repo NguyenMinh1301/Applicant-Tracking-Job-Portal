@@ -17,3 +17,11 @@ resilience4j:
         permittedNumberOfCallsInHalfOpenState: 5
         eventConsumerBufferSize: 20
         registerHealthIndicator: true
+      r2Storage:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        waitDurationInOpenState: 30s
+        failureRateThreshold: 50
+        permittedNumberOfCallsInHalfOpenState: 3
+        eventConsumerBufferSize: 20
+        registerHealthIndicator: true
