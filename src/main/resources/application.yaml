@@ -56,6 +56,19 @@ spring:
         index-type: hnsw
         distance-type: cosine_distance
         dimensions: 1536
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+cloudflare:
+  r2:
+    endpoint: ${R2_ENDPOINT}
+    bucket: ${R2_BUCKET}
+    access-key: ${R2_ACCESS_KEY}
+    secret-key: ${R2_SECRET_KEY}
+    public-url: ${R2_PUBLIC_URL}
+
 resend:
   api-key: ${RESEND_API_KEY}
   domain: vietrecruit.site

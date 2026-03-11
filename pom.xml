@@ -207,6 +207,13 @@
 			<version>2.0.1</version>
 		</dependency>
 
+		<!-- AWS SDK v2 S3 (Cloudflare R2) -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>2.29.51</version>
+		</dependency>
+
 		<!-- Logstash -->
 		<dependency>
 			<groupId>net.logstash.logback</groupId>
