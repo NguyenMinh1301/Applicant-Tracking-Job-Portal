@@ -27,6 +27,10 @@ public final class ApiConstants {
 
         public static final String ROOT = API_VERSION + "/users";
         public static final String ME = "/me";
+        public static final String ME_AVATAR = "/me/avatar";
+        public static final String ME_AVATAR_URL = "/me/avatar/url";
+        public static final String ME_BANNER = "/me/banner";
+        public static final String ME_BANNER_URL = "/me/banner/url";
     }
 
     public static final class AdminUser {

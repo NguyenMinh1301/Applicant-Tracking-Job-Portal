@@ -85,6 +85,23 @@ public enum ApiErrorCode {
     CANDIDATE_CV_SIZE_EXCEEDED("CANDIDATE_CV_SIZE_EXCEEDED",
             "File size exceeds the 5MB limit", HttpStatus.BAD_REQUEST),
 
+    // Storage
+    STORAGE_UNAVAILABLE("STORAGE_UNAVAILABLE",
+            "File storage service is temporarily unavailable. Please try again later.",
+            HttpStatus.SERVICE_UNAVAILABLE),
+
+    // User Avatar & Banner
+    USER_AVATAR_INVALID_TYPE("USER_AVATAR_INVALID_TYPE",
+            "Unsupported image type. Accepted: JPEG, PNG, WebP",
+            HttpStatus.UNSUPPORTED_MEDIA_TYPE),
+    USER_AVATAR_SIZE_EXCEEDED("USER_AVATAR_SIZE_EXCEEDED",
+            "Avatar file size exceeds the 2MB limit", HttpStatus.BAD_REQUEST),
+    USER_BANNER_INVALID_TYPE("USER_BANNER_INVALID_TYPE",
+            "Unsupported image type. Accepted: JPEG, PNG, WebP",
+            HttpStatus.UNSUPPORTED_MEDIA_TYPE),
+    USER_BANNER_SIZE_EXCEEDED("USER_BANNER_SIZE_EXCEEDED",
+            "Banner file size exceeds the 3MB limit", HttpStatus.BAD_REQUEST),
+
     // Generic
     CONFLICT("CONFLICT", "Resource already exists", HttpStatus.CONFLICT);
 
