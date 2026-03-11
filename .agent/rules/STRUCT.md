@@ -5,6 +5,8 @@ description: I only turn it on when I'm active or working on a VietRecruit or Vi
 
 # Project Structure and Architecture
 
+**Application Purpose:** VietRecruit is a highly concurrent, scalable Applicant Tracking System (ATS) and recruitment platform. Its primary business objective is to streamline the hiring lifecycle—managing companies, organizational hierarchies (departments, locations, categories), job postings, and candidate tracking, while supporting capabilities like subscription-based quotas and integrated payments.
+
 This document provides a comprehensive overview of the `VietRecruit` project structure, key technical components, and defined architectural patterns. Use this as a map to understand how the codebase and infrastructure are organized.
 
 ## 1. Top-Level Directory Structure
@@ -24,8 +26,23 @@ VietRecruit/
 ├── src/                        # Main Application Source Code (Java/Spring Boot)
 │   ├── main/
 │   │   ├── java/com/vietrecruit/
-│   │   │   ├── common/         # Shared utilities and base classes
+│   │   │   ├── common/         # Shared utilities, configs, exception handling, and security
 │   │   │   ├── feature/        # Feature modules (Domain-Driven Design)
+│   │   │   │   ├── auth/         # Authentication, registration, and session management
+│   │   │   │   │   ├── controller/ # REST endpoints for login/register/password-reset
+│   │   │   │   │   ├── dto/        # Request/Response payloads for auth contracts
+│   │   │   │   │   ├── entity/     # JPA entities (e.g., RefreshToken, PasswordResetToken)
+│   │   │   │   │   ├── repository/ # Data access for auth-specific tokens
+│   │   │   │   │   └── service/    # Business logic for JWT generation and auth flows
+│   │   │   │   ├── category/     # Job categorization and taxonomy
+│   │   │   │   ├── company/      # Employer tenant profiles and settings
+│   │   │   │   ├── department/   # Internal company organizational units
+│   │   │   │   ├── job/          # Core job posting and lifecycle management
+│   │   │   │   ├── location/     # Geographical locations for physical presence mapping
+│   │   │   │   ├── notification/ # Email and in-app alert delivery
+│   │   │   │   ├── payment/      # PayOS integrations and webhook processing
+│   │   │   │   ├── subscription/ # Employer quota and tier management
+│   │   │   │   └── user/         # User profile, RBAC, and contextual identity
 │   │   │   └── Application.java# Spring Boot Entry point
 │   │   └── resources/
 │   │       ├── db/migration/   # Flyway SQL migrations
