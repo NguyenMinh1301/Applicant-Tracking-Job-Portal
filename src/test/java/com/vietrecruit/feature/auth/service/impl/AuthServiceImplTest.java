@@ -33,6 +33,7 @@ import com.vietrecruit.feature.auth.dto.response.LoginResponse;
 import com.vietrecruit.feature.auth.entity.RefreshToken;
 import com.vietrecruit.feature.auth.repository.RefreshTokenRepository;
 import com.vietrecruit.feature.auth.repository.UserAuthProviderRepository;
+import com.vietrecruit.feature.candidate.repository.CandidateRepository;
 import com.vietrecruit.feature.notification.dto.EmailRequest;
 import com.vietrecruit.feature.notification.service.NotificationService;
 import com.vietrecruit.feature.user.entity.Permission;
@@ -59,6 +60,8 @@ class AuthServiceImplTest {
     @Mock private AuthCacheService authCacheService;
 
     @Mock private NotificationService notificationService;
+
+    @Mock private CandidateRepository candidateRepository;
 
     @InjectMocks private AuthServiceImpl authService;
 

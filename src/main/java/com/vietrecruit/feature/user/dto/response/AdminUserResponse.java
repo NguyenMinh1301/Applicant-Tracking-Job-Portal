@@ -38,6 +38,9 @@ public class AdminUserResponse {
     @Schema(description = "URL to the user's avatar image")
     private String avatarUrl;
 
+    @Schema(description = "URL to the user's banner image")
+    private String bannerUrl;
+
     @Schema(description = "LinkedIn profile URL")
     private String linkedinUrl;
 
