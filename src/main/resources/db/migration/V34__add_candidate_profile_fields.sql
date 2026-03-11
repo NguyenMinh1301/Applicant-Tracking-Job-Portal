@@ -1,0 +1,12 @@
+ALTER TABLE candidates ADD COLUMN desired_position VARCHAR(100);
+ALTER TABLE candidates ADD COLUMN desired_position_level VARCHAR(50);
+ALTER TABLE candidates ADD COLUMN years_of_experience SMALLINT;
+ALTER TABLE candidates ADD COLUMN skills TEXT[];
+ALTER TABLE candidates ADD COLUMN primary_language VARCHAR(50);
+ALTER TABLE candidates ADD COLUMN work_type VARCHAR(20);
+ALTER TABLE candidates ADD COLUMN desired_salary_min BIGINT;
+ALTER TABLE candidates ADD COLUMN desired_salary_max BIGINT;
+ALTER TABLE candidates ADD COLUMN available_from DATE;
+ALTER TABLE candidates ADD COLUMN education_level VARCHAR(50);
+ALTER TABLE candidates ADD COLUMN education_major VARCHAR(100);
+ALTER TABLE candidates ADD COLUMN is_open_to_work BOOLEAN DEFAULT TRUE;
