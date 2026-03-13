@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Interview Scheduled</title>
+</head>
+<body style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+    <div style="background: linear-gradient(135deg, #1a73e8, #4285f4); padding: 24px; border-radius: 8px 8px 0 0;">
+        <h1 style="color: #fff; margin: 0; font-size: 22px;">Interview Scheduled</h1>
+    </div>
+    <div style="background: #fff; border: 1px solid #e0e0e0; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p>Hi <span th:text="${candidateName}">Candidate</span>,</p>
+        <p>An interview has been scheduled for your application to <strong th:text="${jobTitle}">Job Title</strong>.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr>
+                <td style="padding: 8px 0; color: #666; width: 120px;">Interview:</td>
+                <td style="padding: 8px 0; font-weight: bold;" th:text="${interviewTitle}">Technical Round</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; color: #666;">Scheduled:</td>
+                <td style="padding: 8px 0; font-weight: bold;" th:text="${scheduledAt}">2024-01-15T10:00:00Z</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; color: #666;">Duration:</td>
+                <td style="padding: 8px 0; font-weight: bold;"><span th:text="${durationMinutes}">60</span> minutes</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; color: #666;">Location:</td>
+                <td style="padding: 8px 0; font-weight: bold;" th:text="${locationOrLink}">TBD</td>
+            </tr>
+        </table>
+        <p>Please be prepared for the interview at the scheduled time.</p>
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;" />
+        <p style="font-size: 12px; color: #888;">This is an automated notification from VietRecruit.</p>
+    </div>
+</body>
+</html>
