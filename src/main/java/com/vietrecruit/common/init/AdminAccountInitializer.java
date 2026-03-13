@@ -74,8 +74,7 @@ public class AdminAccountInitializer implements ApplicationRunner {
                         .emailVerifiedAt(Instant.now())
                         .isActive(true)
                         .isLocked(false)
-                        .companyId(
-                                java.util.UUID.fromString("17f1e620-e7eb-49e5-a692-84f9c4af5b1e"))
+                        .companyId(null)
                         .roles(Set.of(adminRole))
                         .build();
 

@@ -83,6 +83,34 @@ public enum ApiSuccessCode {
     CANDIDATE_CV_UPLOAD_SUCCESS("CANDIDATE_CV_UPLOAD_SUCCESS", "CV uploaded successfully"),
     CANDIDATE_CV_DELETE_SUCCESS("CANDIDATE_CV_DELETE_SUCCESS", "CV deleted successfully"),
 
+    // Application
+    APPLICATION_CREATE_SUCCESS("APPLICATION_CREATE_SUCCESS", "Application submitted successfully"),
+    APPLICATION_FETCH_SUCCESS("APPLICATION_FETCH_SUCCESS", "Application retrieved successfully"),
+    APPLICATION_LIST_SUCCESS("APPLICATION_LIST_SUCCESS", "Application list retrieved successfully"),
+    APPLICATION_STATUS_UPDATE_SUCCESS("APPLICATION_STATUS_UPDATE_SUCCESS",
+            "Application status updated successfully"),
+    APPLICATION_STATUS_HISTORY_SUCCESS("APPLICATION_STATUS_HISTORY_SUCCESS",
+            "Application status history retrieved successfully"),
+
+    // Interview
+    INTERVIEW_CREATE_SUCCESS("INTERVIEW_CREATE_SUCCESS", "Interview scheduled successfully"),
+    INTERVIEW_FETCH_SUCCESS("INTERVIEW_FETCH_SUCCESS", "Interview retrieved successfully"),
+    INTERVIEW_LIST_SUCCESS("INTERVIEW_LIST_SUCCESS", "Interview list retrieved successfully"),
+    INTERVIEW_STATUS_UPDATE_SUCCESS("INTERVIEW_STATUS_UPDATE_SUCCESS",
+            "Interview status updated successfully"),
+
+    // Scorecard
+    SCORECARD_CREATE_SUCCESS("SCORECARD_CREATE_SUCCESS", "Scorecard submitted successfully"),
+    SCORECARD_LIST_SUCCESS("SCORECARD_LIST_SUCCESS", "Scorecards retrieved successfully"),
+
+    // Offer
+    OFFER_CREATE_SUCCESS("OFFER_CREATE_SUCCESS", "Offer created successfully"),
+    OFFER_FETCH_SUCCESS("OFFER_FETCH_SUCCESS", "Offer retrieved successfully"),
+    OFFER_LIST_SUCCESS("OFFER_LIST_SUCCESS", "Offers retrieved successfully"),
+    OFFER_SEND_SUCCESS("OFFER_SEND_SUCCESS", "Offer sent successfully"),
+    OFFER_RESPOND_SUCCESS("OFFER_RESPOND_SUCCESS", "Offer response recorded successfully"),
+    OFFER_DELETE_SUCCESS("OFFER_DELETE_SUCCESS", "Offer deleted successfully"),
+
     // User Avatar & Banner
     USER_AVATAR_UPLOAD_SUCCESS("USER_AVATAR_UPLOAD_SUCCESS", "Avatar uploaded successfully"),
     USER_AVATAR_UPDATE_SUCCESS("USER_AVATAR_UPDATE_SUCCESS", "Avatar URL updated successfully"),

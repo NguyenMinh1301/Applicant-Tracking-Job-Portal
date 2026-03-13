@@ -137,4 +137,34 @@ public final class ApiConstants {
         public static final String ME_CV = "/me/cv";
         public static final String GET = "/{id}";
     }
+
+    public static final class Application {
+        private Application() {}
+
+        public static final String ROOT = API_VERSION + "/applications";
+        public static final String GET = "/{id}";
+        public static final String MINE = "/mine";
+        public static final String STATUS = "/{id}/status";
+        public static final String STATUS_HISTORY = "/{id}/status-history";
+        public static final String INTERVIEWS = "/{id}/interviews";
+        public static final String OFFERS = "/{id}/offers";
+    }
+
+    public static final class Interview {
+        private Interview() {}
+
+        public static final String ROOT = API_VERSION + "/interviews";
+        public static final String GET = "/{id}";
+        public static final String STATUS = "/{id}/status";
+        public static final String SCORECARDS = "/{id}/scorecards";
+    }
+
+    public static final class Offer {
+        private Offer() {}
+
+        public static final String ROOT = API_VERSION + "/offers";
+        public static final String GET = "/{id}";
+        public static final String SEND = "/{id}/send";
+        public static final String RESPOND = "/{id}/respond";
+    }
 }

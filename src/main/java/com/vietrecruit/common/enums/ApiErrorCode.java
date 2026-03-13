@@ -102,6 +102,38 @@ public enum ApiErrorCode {
     USER_BANNER_SIZE_EXCEEDED("USER_BANNER_SIZE_EXCEEDED",
             "Banner file size exceeds the 3MB limit", HttpStatus.BAD_REQUEST),
 
+    // Application
+    APPLICATION_NOT_FOUND("APPLICATION_NOT_FOUND", "Application not found", HttpStatus.NOT_FOUND),
+    APPLICATION_DUPLICATE("APPLICATION_DUPLICATE", "You have already applied to this job", HttpStatus.CONFLICT),
+    APPLICATION_INVALID_TRANSITION("APPLICATION_INVALID_TRANSITION", "Invalid application status transition",
+            HttpStatus.BAD_REQUEST),
+    APPLICATION_CV_REQUIRED("APPLICATION_CV_REQUIRED", "A CV is required to apply", HttpStatus.BAD_REQUEST),
+    JOB_NOT_PUBLISHED("JOB_NOT_PUBLISHED", "Job is not published or does not exist", HttpStatus.NOT_FOUND),
+
+    // Interview
+    INTERVIEW_NOT_FOUND("INTERVIEW_NOT_FOUND", "Interview not found", HttpStatus.NOT_FOUND),
+    INTERVIEW_INVALID_STATUS("INTERVIEW_INVALID_STATUS",
+            "Application must be in INTERVIEW status to schedule interviews", HttpStatus.BAD_REQUEST),
+    INTERVIEW_INVALID_INTERVIEWER("INTERVIEW_INVALID_INTERVIEWER",
+            "One or more interviewers are not eligible", HttpStatus.BAD_REQUEST),
+
+    // Scorecard
+    SCORECARD_NOT_FOUND("SCORECARD_NOT_FOUND", "Scorecard not found", HttpStatus.NOT_FOUND),
+    SCORECARD_DUPLICATE("SCORECARD_DUPLICATE", "Scorecard already submitted for this interview",
+            HttpStatus.CONFLICT),
+    SCORECARD_NOT_ELIGIBLE("SCORECARD_NOT_ELIGIBLE", "You are not assigned to this interview",
+            HttpStatus.FORBIDDEN),
+    SCORECARD_INTERVIEW_NOT_READY("SCORECARD_INTERVIEW_NOT_READY",
+            "Interview is not in a valid state for scorecard submission", HttpStatus.BAD_REQUEST),
+
+    // Offer
+    OFFER_NOT_FOUND("OFFER_NOT_FOUND", "Offer not found", HttpStatus.NOT_FOUND),
+    OFFER_ALREADY_EXISTS("OFFER_ALREADY_EXISTS", "An active offer already exists for this application",
+            HttpStatus.CONFLICT),
+    OFFER_INVALID_TRANSITION("OFFER_INVALID_TRANSITION", "Invalid offer status transition", HttpStatus.BAD_REQUEST),
+    OFFER_APPLICATION_NOT_READY("OFFER_APPLICATION_NOT_READY", "Application must be in OFFER status",
+            HttpStatus.BAD_REQUEST),
+
     // Generic
     CONFLICT("CONFLICT", "Resource already exists", HttpStatus.CONFLICT);
 
