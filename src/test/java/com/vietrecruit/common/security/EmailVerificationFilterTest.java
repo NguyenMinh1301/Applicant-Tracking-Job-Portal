@@ -22,7 +22,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.impl.DefaultClaims;
 
 @ExtendWith(MockitoExtension.class)
 class EmailVerificationFilterTest {
@@ -79,8 +78,7 @@ class EmailVerificationFilterTest {
                         new UsernamePasswordAuthenticationToken(
                                 userId.toString(), null, Collections.emptyList()));
 
-        Claims claims = new DefaultClaims();
-        claims.put("email_verified", false);
+        Claims claims = mock(Claims.class);
 
         when(jwtService.parseAndValidate(token)).thenReturn(claims);
         when(jwtService.extractEmailVerified(claims)).thenReturn(false);
@@ -107,8 +105,7 @@ class EmailVerificationFilterTest {
                         new UsernamePasswordAuthenticationToken(
                                 userId.toString(), null, Collections.emptyList()));
 
-        Claims claims = new DefaultClaims();
-        claims.put("email_verified", true);
+        Claims claims = mock(Claims.class);
 
         when(jwtService.parseAndValidate(token)).thenReturn(claims);
         when(jwtService.extractEmailVerified(claims)).thenReturn(true);
