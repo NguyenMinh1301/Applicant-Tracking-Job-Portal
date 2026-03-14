@@ -20,14 +20,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vietrecruit.feature.user.repository.UserRepository;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.impl.DefaultClaims;
 
 @ExtendWith(MockitoExtension.class)
 class EmailVerificationFilterTest {
 
     private MockMvc mockMvc;
 
-    @Mock private UserRepository userRepository;
+    @Mock private JwtService jwtService;
 
     private EmailVerificationFilter filter;
 
@@ -36,7 +38,7 @@ class EmailVerificationFilterTest {
         ObjectMapper objectMapper =
                 new ObjectMapper()
                         .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-        filter = new EmailVerificationFilter(userRepository, objectMapper);
+        filter = new EmailVerificationFilter(jwtService, objectMapper);
         SecurityContextHolder.clearContext();
     }
 
@@ -50,7 +52,7 @@ class EmailVerificationFilterTest {
 
         mockMvc.perform(get("/vietrecruit/auth/login")).andExpect(status().isNotFound());
 
-        verifyNoInteractions(userRepository);
+        verifyNoInteractions(jwtService);
     }
 
     @Test
@@ -63,26 +65,32 @@ class EmailVerificationFilterTest {
 
         mockMvc.perform(get("/vietrecruit/users/me")).andExpect(status().isNotFound());
 
-        verifyNoInteractions(userRepository);
+        verifyNoInteractions(jwtService);
     }
 
     @Test
     @DisplayName("Should block unverified authenticated user with 403")
     void unverifiedUser_Returns403() throws Exception {
         UUID userId = UUID.randomUUID();
+        String token = "valid.jwt.token";
+
         SecurityContextHolder.getContext()
                 .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
                                 userId.toString(), null, Collections.emptyList()));
 
-        when(userRepository.findEmailVerifiedById(userId)).thenReturn(false);
+        Claims claims = new DefaultClaims();
+        claims.put("email_verified", false);
+
+        when(jwtService.parseAndValidate(token)).thenReturn(claims);
+        when(jwtService.extractEmailVerified(claims)).thenReturn(false);
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(new DummyController())
                         .addFilter(filter, "/*")
                         .build();
 
-        mockMvc.perform(get("/protected-resource"))
+        mockMvc.perform(get("/protected-resource").header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("AUTH_EMAIL_NOT_VERIFIED"));
@@ -92,19 +100,26 @@ class EmailVerificationFilterTest {
     @DisplayName("Should allow verified authenticated user through")
     void verifiedUser_PassesThrough() throws Exception {
         UUID userId = UUID.randomUUID();
+        String token = "valid.jwt.token";
+
         SecurityContextHolder.getContext()
                 .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
                                 userId.toString(), null, Collections.emptyList()));
 
-        when(userRepository.findEmailVerifiedById(userId)).thenReturn(true);
+        Claims claims = new DefaultClaims();
+        claims.put("email_verified", true);
+
+        when(jwtService.parseAndValidate(token)).thenReturn(claims);
+        when(jwtService.extractEmailVerified(claims)).thenReturn(true);
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(new DummyController())
                         .addFilter(filter, "/*")
                         .build();
 
-        mockMvc.perform(get("/protected-resource")).andExpect(status().isOk());
+        mockMvc.perform(get("/protected-resource").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
     }
 
     @org.springframework.web.bind.annotation.RestController

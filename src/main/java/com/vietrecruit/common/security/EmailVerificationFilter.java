@@ -13,13 +13,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.response.ApiResponse;
-import com.vietrecruit.feature.user.repository.UserRepository;
 
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,6 +28,9 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @RequiredArgsConstructor
 public class EmailVerificationFilter extends OncePerRequestFilter {
+
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
 
     private static final Set<String> SKIP_PATTERNS =
             Set.of(
@@ -39,7 +43,7 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
                     "/actuator/**",
                     "/health/**");
 
-    private final UserRepository userRepository;
+    private final JwtService jwtService;
     private final ObjectMapper objectMapper;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
@@ -59,21 +63,35 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String principal = authentication.getPrincipal().toString();
-        try {
-            java.util.UUID userId = java.util.UUID.fromString(principal);
-            Boolean emailVerified = userRepository.findEmailVerifiedById(userId);
+        // Extract email_verified from JWT claims — no DB query
+        String token = extractToken(request);
+        if (token != null) {
+            try {
+                Claims claims = jwtService.parseAndValidate(token);
+                boolean emailVerified = jwtService.extractEmailVerified(claims);
 
-            if (Boolean.FALSE.equals(emailVerified)) {
-                log.debug("Blocked unverified user: userId={}", userId);
-                writeErrorResponse(response);
-                return;
+                if (!emailVerified) {
+                    log.debug("Blocked unverified user: userId={}", authentication.getPrincipal());
+                    writeErrorResponse(response);
+                    return;
+                }
+            } catch (Exception e) {
+                // Token already validated by JwtAuthenticationFilter; if parsing fails here
+                // it means the token is invalid so we let the request proceed (auth filter
+                // will have already rejected it or it's a non-JWT auth).
+                log.debug("Could not parse token for email verification check: {}", e.getMessage());
             }
-        } catch (IllegalArgumentException e) {
-            log.debug("Non-UUID principal, skipping verification check: {}", principal);
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String extractToken(HttpServletRequest request) {
+        String header = request.getHeader(AUTHORIZATION_HEADER);
+        if (StringUtils.hasText(header) && header.startsWith(BEARER_PREFIX)) {
+            return header.substring(BEARER_PREFIX.length());
+        }
+        return null;
     }
 
     private boolean shouldSkip(String requestUri) {
