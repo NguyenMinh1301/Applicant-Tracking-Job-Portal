@@ -1,0 +1,6 @@
+[submodule ".claude"]
+	path = .claude
+	url = https://github.com/VietRecruit/AgentKit.git
+[submodule "docs"]
+	path = docs
+	url = https://github.com/VietRecruit/BE-Document.git
