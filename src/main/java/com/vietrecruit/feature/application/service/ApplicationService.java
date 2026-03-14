@@ -31,4 +31,11 @@ public interface ApplicationService {
             ApplicationStatusUpdateRequest request);
 
     List<ApplicationStatusHistoryResponse> getStatusHistory(UUID applicationId, UUID companyId);
+
+    void insertHistory(
+            UUID applicationId,
+            ApplicationStatus oldStatus,
+            ApplicationStatus newStatus,
+            UUID changedBy,
+            String notes);
 }

@@ -21,6 +21,7 @@ import com.vietrecruit.feature.application.enums.OfferStatus;
 import com.vietrecruit.feature.application.mapper.OfferMapper;
 import com.vietrecruit.feature.application.repository.ApplicationRepository;
 import com.vietrecruit.feature.application.repository.OfferRepository;
+import com.vietrecruit.feature.application.service.ApplicationService;
 import com.vietrecruit.feature.application.service.OfferService;
 import com.vietrecruit.feature.candidate.repository.CandidateRepository;
 import com.vietrecruit.feature.job.repository.JobRepository;
@@ -39,7 +40,7 @@ public class OfferServiceImpl implements OfferService {
 
     private final OfferRepository offerRepository;
     private final ApplicationRepository applicationRepository;
-    private final ApplicationServiceImpl applicationService;
+    private final ApplicationService applicationService;
     private final JobRepository jobRepository;
     private final CandidateRepository candidateRepository;
     private final UserRepository userRepository;
@@ -169,9 +170,10 @@ public class OfferServiceImpl implements OfferService {
                         .findByIdAndDeletedAtIsNull(offerId)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.OFFER_NOT_FOUND));
 
-        applicationRepository
-                .findByIdAndCompanyId(offer.getApplicationId(), companyId)
-                .orElseThrow(() -> new ApiException(ApiErrorCode.APPLICATION_NOT_FOUND));
+        var application =
+                applicationRepository
+                        .findByIdAndCompanyId(offer.getApplicationId(), companyId)
+                        .orElseThrow(() -> new ApiException(ApiErrorCode.APPLICATION_NOT_FOUND));
 
         if (offer.getStatus() != OfferStatus.DRAFT) {
             throw new ApiException(
@@ -182,7 +184,7 @@ public class OfferServiceImpl implements OfferService {
         offer.setUpdatedBy(userId);
         offer = offerRepository.save(offer);
 
-        sendOfferReceivedNotification(offer);
+        sendOfferReceivedNotification(offer, application);
 
         return offerMapper.toResponse(offer);
     }
@@ -240,7 +242,7 @@ public class OfferServiceImpl implements OfferService {
                 userId,
                 isAccept ? "Offer accepted" : "Offer declined");
 
-        sendOfferRespondedNotification(offer, application, isAccept);
+        sendOfferRespondedNotification(offer, application, candidate, isAccept);
 
         return offerMapper.toResponse(offer);
     }
@@ -268,14 +270,8 @@ public class OfferServiceImpl implements OfferService {
 
     // ── Notifications ──────────────────────────────────────────────────
 
-    private void sendOfferReceivedNotification(Offer offer) {
+    private void sendOfferReceivedNotification(Offer offer, Application application) {
         try {
-            var application =
-                    applicationRepository
-                            .findByIdAndDeletedAtIsNull(offer.getApplicationId())
-                            .orElse(null);
-            if (application == null) return;
-
             var candidate =
                     candidateRepository
                             .findByIdAndDeletedAtIsNull(application.getCandidateId())
@@ -306,7 +302,10 @@ public class OfferServiceImpl implements OfferService {
     }
 
     private void sendOfferRespondedNotification(
-            Offer offer, Application application, boolean accepted) {
+            Offer offer,
+            Application application,
+            com.vietrecruit.feature.candidate.entity.Candidate candidate,
+            boolean accepted) {
         try {
             var job = jobRepository.findById(application.getJobId()).orElse(null);
             if (job == null || job.getCreatedBy() == null) return;
@@ -314,10 +313,6 @@ public class OfferServiceImpl implements OfferService {
             var hrUser = userRepository.findById(job.getCreatedBy()).orElse(null);
             if (hrUser == null || hrUser.getEmail() == null) return;
 
-            var candidate =
-                    candidateRepository
-                            .findByIdAndDeletedAtIsNull(application.getCandidateId())
-                            .orElse(null);
             var candidateUser =
                     candidate != null
                             ? userRepository.findById(candidate.getUserId()).orElse(null)

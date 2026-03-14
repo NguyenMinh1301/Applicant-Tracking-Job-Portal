@@ -142,34 +142,22 @@ public class ApplicationServiceImpl implements ApplicationService {
     public PageResponse<ApplicationSummaryResponse> listApplications(
             UUID companyId, UUID jobId, ApplicationStatus status, Pageable pageable) {
 
-        var page =
-                applicationRepository
-                        .findByCompanyFiltered(companyId, jobId, status, pageable)
-                        .map(
-                                app -> {
-                                    var resp = applicationMapper.toSummaryResponse(app);
-                                    enrichSummary(resp, app);
-                                    return resp;
-                                });
-
-        return PageResponse.from(page);
+        var page = applicationRepository.findByCompanyFiltered(companyId, jobId, status, pageable);
+        var content = page.getContent();
+        var summaries = content.stream().map(applicationMapper::toSummaryResponse).toList();
+        batchEnrichSummaries(summaries, content);
+        return PageResponse.from(page.map(a -> summaries.get(content.indexOf(a))));
     }
 
     @Override
     public PageResponse<ApplicationSummaryResponse> listMyApplications(
             UUID userId, Pageable pageable) {
 
-        var page =
-                applicationRepository
-                        .findByUserId(userId, pageable)
-                        .map(
-                                app -> {
-                                    var resp = applicationMapper.toSummaryResponse(app);
-                                    enrichSummary(resp, app);
-                                    return resp;
-                                });
-
-        return PageResponse.from(page);
+        var page = applicationRepository.findByUserId(userId, pageable);
+        var content = page.getContent();
+        var summaries = content.stream().map(applicationMapper::toSummaryResponse).toList();
+        batchEnrichSummaries(summaries, content);
+        return PageResponse.from(page.map(a -> summaries.get(content.indexOf(a))));
     }
 
     @Override
@@ -200,7 +188,14 @@ public class ApplicationServiceImpl implements ApplicationService {
 
         insertHistory(applicationId, currentStatus, targetStatus, userId, request.getNotes());
 
-        sendStatusChangedNotification(application);
+        // Load related entities once for notification instead of re-querying inside
+        var job = jobRepository.findById(application.getJobId()).orElse(null);
+        var candidateEntity =
+                candidateRepository.findByIdAndDeletedAtIsNull(application.getCandidateId());
+        var candidateUser =
+                candidateEntity.flatMap(c -> userRepository.findById(c.getUserId())).orElse(null);
+
+        sendStatusChangedNotification(application, job, candidateUser);
 
         return enrichResponse(application, userId);
     }
@@ -236,7 +231,8 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     // ── Internal helpers ───────────────────────────────────────────────
 
-    void insertHistory(
+    @Override
+    public void insertHistory(
             UUID applicationId,
             ApplicationStatus oldStatus,
             ApplicationStatus newStatus,
@@ -301,15 +297,63 @@ public class ApplicationServiceImpl implements ApplicationService {
                                         .ifPresent(u -> resp.setCandidateName(u.getFullName())));
     }
 
-    private void enrichSummary(ApplicationSummaryResponse resp, Application app) {
-        jobRepository.findById(app.getJobId()).ifPresent(j -> resp.setJobTitle(j.getTitle()));
-        candidateRepository
-                .findByIdAndDeletedAtIsNull(app.getCandidateId())
-                .ifPresent(
-                        c ->
-                                userRepository
-                                        .findById(c.getUserId())
-                                        .ifPresent(u -> resp.setCandidateName(u.getFullName())));
+    /**
+     * Batch-enriches summary responses to avoid N+1 queries. Collects all jobIds and candidateIds,
+     * fetches them in bulk, then populates the responses from in-memory maps.
+     */
+    private void batchEnrichSummaries(
+            List<ApplicationSummaryResponse> summaries, List<Application> applications) {
+
+        if (summaries.isEmpty()) return;
+
+        // Collect all unique IDs
+        var jobIds =
+                applications.stream()
+                        .map(Application::getJobId)
+                        .distinct()
+                        .collect(java.util.stream.Collectors.toList());
+        var candidateIds =
+                applications.stream()
+                        .map(Application::getCandidateId)
+                        .distinct()
+                        .collect(java.util.stream.Collectors.toList());
+
+        // Batch fetch
+        var jobMap =
+                jobRepository.findAllById(jobIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(Job::getId, j -> j));
+        var candidateMap =
+                candidateRepository.findAllById(candidateIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(Candidate::getId, c -> c));
+
+        // Batch fetch users for candidates
+        var userIds =
+                candidateMap.values().stream()
+                        .map(Candidate::getUserId)
+                        .distinct()
+                        .collect(java.util.stream.Collectors.toList());
+        var userMap =
+                userRepository.findAllById(userIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(u -> u.getId(), u -> u));
+
+        // Enrich from maps
+        for (int i = 0; i < summaries.size(); i++) {
+            var resp = summaries.get(i);
+            var app = applications.get(i);
+
+            var job = jobMap.get(app.getJobId());
+            if (job != null) {
+                resp.setJobTitle(job.getTitle());
+            }
+
+            var candidate = candidateMap.get(app.getCandidateId());
+            if (candidate != null) {
+                var user = userMap.get(candidate.getUserId());
+                if (user != null) {
+                    resp.setCandidateName(user.getFullName());
+                }
+            }
+        }
     }
 
     // ── Notifications ──────────────────────────────────────────────────
@@ -342,27 +386,24 @@ public class ApplicationServiceImpl implements ApplicationService {
         }
     }
 
-    private void sendStatusChangedNotification(Application application) {
+    private void sendStatusChangedNotification(
+            Application application,
+            com.vietrecruit.feature.job.entity.Job job,
+            com.vietrecruit.feature.user.entity.User candidateUser) {
         try {
-            var candidate =
-                    candidateRepository.findByIdAndDeletedAtIsNull(application.getCandidateId());
-            if (candidate.isEmpty()) return;
+            if (candidateUser == null || candidateUser.getEmail() == null) return;
 
-            var user = userRepository.findById(candidate.get().getUserId()).orElse(null);
-            if (user == null || user.getEmail() == null) return;
-
-            var job = jobRepository.findById(application.getJobId()).orElse(null);
             var jobTitle = job != null ? job.getTitle() : "a position";
 
             notificationService.send(
                     new EmailRequest(
-                            List.of(user.getEmail()),
+                            List.of(candidateUser.getEmail()),
                             EmailSenderAlias.NOTIFICATION,
                             "Application Status Update — " + jobTitle,
                             null,
                             "application-status-changed",
                             Map.of(
-                                    "candidateName", user.getFullName(),
+                                    "candidateName", candidateUser.getFullName(),
                                     "jobTitle", jobTitle,
                                     "newStatus", application.getStatus().name())));
         } catch (Exception e) {
