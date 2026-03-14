@@ -51,6 +51,8 @@ public enum ApiErrorCode {
     AUTH_OAUTH2_FAILED("AUTH_OAUTH2_FAILED", "OAuth2 authentication failed", HttpStatus.UNAUTHORIZED),
     AUTH_OAUTH2_EMAIL_MISSING("AUTH_OAUTH2_EMAIL_MISSING", "Email not available from OAuth2 provider",
             HttpStatus.BAD_REQUEST),
+    AUTH_OAUTH2_CODE_INVALID("AUTH_OAUTH2_CODE_INVALID", "Invalid or expired authorization code",
+            HttpStatus.BAD_REQUEST),
 
     // Notification
     NOTIFICATION_SEND_FAILED("NOTIFICATION_SEND_FAILED", "Failed to send notification",
@@ -89,6 +91,11 @@ public enum ApiErrorCode {
     STORAGE_UNAVAILABLE("STORAGE_UNAVAILABLE",
             "File storage service is temporarily unavailable. Please try again later.",
             HttpStatus.SERVICE_UNAVAILABLE),
+    FILE_TOO_LARGE("FILE_TOO_LARGE", "File size exceeds the allowed limit",
+            HttpStatus.PAYLOAD_TOO_LARGE),
+    FILE_TYPE_NOT_ALLOWED("FILE_TYPE_NOT_ALLOWED",
+            "File type is not allowed. Content does not match expected format.",
+            HttpStatus.UNSUPPORTED_MEDIA_TYPE),
 
     // User Avatar & Banner
     USER_AVATAR_INVALID_TYPE("USER_AVATAR_INVALID_TYPE",
@@ -116,6 +123,8 @@ public enum ApiErrorCode {
             "Application must be in INTERVIEW status to schedule interviews", HttpStatus.BAD_REQUEST),
     INTERVIEW_INVALID_INTERVIEWER("INTERVIEW_INVALID_INTERVIEWER",
             "One or more interviewers are not eligible", HttpStatus.BAD_REQUEST),
+    INTERVIEW_INVALID_STATUS_TRANSITION("INTERVIEW_INVALID_STATUS_TRANSITION",
+            "Invalid interview status transition", HttpStatus.BAD_REQUEST),
 
     // Scorecard
     SCORECARD_NOT_FOUND("SCORECARD_NOT_FOUND", "Scorecard not found", HttpStatus.NOT_FOUND),
