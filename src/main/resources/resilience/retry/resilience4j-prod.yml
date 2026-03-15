@@ -23,3 +23,13 @@ resilience4j:
           - software.amazon.awssdk.core.exception.SdkServiceException
         ignoreExceptions:
           - com.vietrecruit.common.exception.ApiException
+      openaiApi:
+        maxAttempts: 3
+        waitDuration: 1s
+        exponentialBackoffMultiplier: 2
+        enableExponentialBackoff: true
+        retryExceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - java.io.IOException
+        ignoreExceptions:
+          - com.vietrecruit.common.exception.ApiException

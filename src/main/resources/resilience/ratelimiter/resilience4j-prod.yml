@@ -55,3 +55,10 @@ resilience4j:
         limitRefreshPeriod: 30s
         timeoutDuration: 5s
         registerHealthIndicator: true
+
+      # AI / OpenAI
+      openaiApi:
+        limitForPeriod: 50
+        limitRefreshPeriod: 60s
+        timeoutDuration: 5s
+        registerHealthIndicator: true
