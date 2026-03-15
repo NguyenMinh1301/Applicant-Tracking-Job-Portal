@@ -1,4 +1,4 @@
-package com.vietrecruit.common.ai.config;
+package com.vietrecruit.feature.ai.config;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
@@ -6,9 +6,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.vietrecruit.common.ai.tools.CandidateSearchTool;
-import com.vietrecruit.common.ai.tools.JobSearchTool;
-import com.vietrecruit.common.ai.tools.SalaryBenchmarkTool;
+import com.vietrecruit.feature.ai.tool.CandidateSearchTool;
+import com.vietrecruit.feature.ai.tool.JobSearchTool;
+import com.vietrecruit.feature.ai.tool.SalaryBenchmarkTool;
 
 @Configuration
 public class OpenAiConfig {

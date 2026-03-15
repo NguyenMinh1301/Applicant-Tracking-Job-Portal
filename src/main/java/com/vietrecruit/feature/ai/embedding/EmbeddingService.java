@@ -1,4 +1,4 @@
-package com.vietrecruit.common.ai.embedding;
+package com.vietrecruit.feature.ai.embedding;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -18,6 +18,10 @@ import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import com.vietrecruit.common.enums.ApiErrorCode;
+import com.vietrecruit.common.exception.ApiException;
+
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -62,6 +66,7 @@ public class EmbeddingService {
         }
     }
 
+    @CircuitBreaker(name = "openaiApi", fallbackMethod = "embedFallback")
     public float[] embed(String text) {
         String hash = sha256(text);
         String cacheKey = CACHE_KEY_PREFIX + hash;
@@ -76,6 +81,12 @@ public class EmbeddingService {
                 .opsForValue()
                 .set(cacheKey, encodeFloatArray(embedding), CACHE_TTL_HOURS, TimeUnit.HOURS);
         return embedding;
+    }
+
+    @SuppressWarnings("unused")
+    private float[] embedFallback(String text, Throwable t) {
+        log.warn("Embedding circuit open. cause={}", t.getMessage());
+        throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE);
     }
 
     private static String sha256(String text) {

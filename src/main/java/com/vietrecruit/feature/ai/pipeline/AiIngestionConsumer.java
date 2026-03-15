@@ -1,4 +1,4 @@
-package com.vietrecruit.common.ai.pipeline;
+package com.vietrecruit.feature.ai.pipeline;
 
 import java.util.Map;
 
@@ -12,13 +12,13 @@ import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 
-import com.vietrecruit.common.ai.embedding.EmbeddingService;
-import com.vietrecruit.common.ai.event.CvUploadedEvent;
-import com.vietrecruit.common.ai.event.JobPublishedEvent;
+import com.vietrecruit.feature.ai.embedding.EmbeddingService;
+import com.vietrecruit.feature.ai.event.CvUploadedEvent;
+import com.vietrecruit.feature.ai.event.JobPublishedEvent;
 import com.vietrecruit.feature.candidate.entity.Candidate;
-import com.vietrecruit.feature.candidate.repository.CandidateRepository;
+import com.vietrecruit.feature.candidate.service.CandidateService;
 import com.vietrecruit.feature.job.entity.Job;
-import com.vietrecruit.feature.job.repository.JobRepository;
+import com.vietrecruit.feature.job.service.JobService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,8 +34,8 @@ public class AiIngestionConsumer {
     static final String TOPIC_JOB_PUBLISHED = "ai.job-published";
 
     private final EmbeddingService embeddingService;
-    private final CandidateRepository candidateRepository;
-    private final JobRepository jobRepository;
+    private final CandidateService candidateService;
+    private final JobService jobService;
     private final S3Client s3Client;
 
     @Value("${cloudflare.r2.bucket}")
@@ -51,9 +51,7 @@ public class AiIngestionConsumer {
         log.info("AI ingestion: CV uploaded event received: candidateId={}", event.candidateId());
         try {
             Candidate candidate =
-                    candidateRepository
-                            .findByIdAndDeletedAtIsNull(event.candidateId())
-                            .orElse(null);
+                    candidateService.findActiveCandidateById(event.candidateId()).orElse(null);
 
             if (candidate == null) {
                 log.warn(
@@ -100,7 +98,7 @@ public class AiIngestionConsumer {
     public void consumeJobPublished(JobPublishedEvent event) {
         log.info("AI ingestion: Job published event received: jobId={}", event.jobId());
         try {
-            Job job = jobRepository.findById(event.jobId()).orElse(null);
+            Job job = jobService.findJobById(event.jobId()).orElse(null);
 
             if (job == null) {
                 log.warn("AI ingestion: job not found, skipping: jobId={}", event.jobId());
@@ -136,14 +134,27 @@ public class AiIngestionConsumer {
     }
 
     @DltHandler
-    public void handleCvDlt(ConsumerRecord<String, CvUploadedEvent> record) {
+    public void handleCvDlt(ConsumerRecord<String, CvUploadedEvent> record, Exception ex) {
         log.error(
                 "AI ingestion DLT: CV event exhausted retries: candidateId={}, topic={},"
-                        + " partition={}, offset={}",
-                record.value().candidateId(),
+                        + " partition={}, offset={}, error={}",
+                record.value() != null ? record.value().candidateId() : "null",
                 record.topic(),
                 record.partition(),
-                record.offset());
+                record.offset(),
+                ex.getMessage());
+    }
+
+    @DltHandler
+    public void handleJobDlt(ConsumerRecord<String, JobPublishedEvent> record, Exception ex) {
+        log.error(
+                "Job embedding DLT exhausted retries. topic={} partition={} offset={} jobId={}"
+                        + " error={}",
+                record.topic(),
+                record.partition(),
+                record.offset(),
+                record.value() != null ? record.value().jobId() : "null",
+                ex.getMessage());
     }
 
     private String fetchAndParseCvFromR2(String cvFileKey) {

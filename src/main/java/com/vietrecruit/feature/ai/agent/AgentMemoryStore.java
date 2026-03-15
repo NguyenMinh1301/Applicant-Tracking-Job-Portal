@@ -1,4 +1,4 @@
-package com.vietrecruit.common.ai.agent;
+package com.vietrecruit.feature.ai.agent;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
