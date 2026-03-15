@@ -31,10 +31,12 @@ import com.vietrecruit.common.security.SecurityUtils;
 import com.vietrecruit.feature.application.dto.request.ApplicationCreateRequest;
 import com.vietrecruit.feature.application.dto.request.ApplicationStatusUpdateRequest;
 import com.vietrecruit.feature.application.dto.response.ApplicationResponse;
+import com.vietrecruit.feature.application.dto.response.ApplicationScreeningResponse;
 import com.vietrecruit.feature.application.dto.response.ApplicationStatusHistoryResponse;
 import com.vietrecruit.feature.application.dto.response.ApplicationSummaryResponse;
 import com.vietrecruit.feature.application.enums.ApplicationStatus;
 import com.vietrecruit.feature.application.service.ApplicationService;
+import com.vietrecruit.feature.application.service.ScreeningService;
 
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.swagger.v3.oas.annotations.Operation;
@@ -51,6 +53,7 @@ import lombok.RequiredArgsConstructor;
 public class ApplicationController extends BaseController {
 
     private final ApplicationService applicationService;
+    private final ScreeningService screeningService;
 
     @Operation(
             summary = "Apply to Job",
@@ -147,6 +150,36 @@ public class ApplicationController extends BaseController {
         var response = applicationService.updateStatus(id, companyId, userId, request);
         return ResponseEntity.ok(
                 ApiResponse.success(ApiSuccessCode.APPLICATION_STATUS_UPDATE_SUCCESS, response));
+    }
+
+    @Operation(
+            summary = "Get Screening Results",
+            description = "HR retrieves cached AI screening scores for all applications of a job")
+    @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyAuthority('ROLE_HR', 'ROLE_COMPANY_ADMIN')")
+    @GetMapping(ApiConstants.Application.SCREENING)
+    public ResponseEntity<ApiResponse<List<ApplicationScreeningResponse>>> getScreeningResults(
+            @PathVariable UUID jobId) {
+        var companyId = resolveCompanyId();
+        var response = screeningService.screenApplications(jobId, companyId);
+        return ResponseEntity.ok(
+                ApiResponse.success(ApiSuccessCode.APPLICATION_SCREENING_SUCCESS, response));
+    }
+
+    @Operation(
+            summary = "Trigger AI Screening",
+            description = "HR triggers async AI scoring for unscored applications of a job")
+    @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyAuthority('ROLE_HR', 'ROLE_COMPANY_ADMIN')")
+    @PostMapping(ApiConstants.Application.SCREENING_TRIGGER)
+    public ResponseEntity<ApiResponse<String>> triggerScreening(@PathVariable UUID jobId) {
+        var companyId = resolveCompanyId();
+        screeningService.triggerAsyncScoring(jobId, companyId);
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(
+                        ApiResponse.success(
+                                ApiSuccessCode.APPLICATION_SCREENING_TRIGGER_SUCCESS,
+                                "Scoring in progress"));
     }
 
     @Operation(
