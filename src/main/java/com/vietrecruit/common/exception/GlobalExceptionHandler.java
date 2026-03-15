@@ -86,6 +86,18 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(ApiErrorCode.FORBIDDEN, ex.getMessage(), null);
     }
 
+    @ExceptionHandler({
+        org.springframework.ai.retry.NonTransientAiException.class,
+        org.springframework.ai.retry.TransientAiException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleAiException(RuntimeException ex) {
+        log.error("AI service error: {}", ex.getMessage());
+        return buildErrorResponse(
+                ApiErrorCode.AI_SERVICE_UNAVAILABLE,
+                ApiErrorCode.AI_SERVICE_UNAVAILABLE.getDefaultMessage(),
+                null);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnhandled(Exception ex) {
         log.error("Unexpected error", ex);

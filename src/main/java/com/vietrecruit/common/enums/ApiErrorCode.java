@@ -143,6 +143,24 @@ public enum ApiErrorCode {
     OFFER_APPLICATION_NOT_READY("OFFER_APPLICATION_NOT_READY", "Application must be in OFFER status",
             HttpStatus.BAD_REQUEST),
 
+    // Invitation
+    INVITATION_NOT_FOUND("INVITATION_NOT_FOUND", "Invitation not found", HttpStatus.NOT_FOUND),
+    INVITATION_EXPIRED("INVITATION_EXPIRED", "Invitation has expired", HttpStatus.BAD_REQUEST),
+    INVITATION_ALREADY_ACCEPTED("INVITATION_ALREADY_ACCEPTED", "Invitation has already been accepted",
+            HttpStatus.CONFLICT),
+    INVALID_ACCOUNT_TYPE("INVALID_ACCOUNT_TYPE", "Account type must be CANDIDATE or EMPLOYER",
+            HttpStatus.BAD_REQUEST),
+    ROLE_GROUP_VIOLATION("ROLE_GROUP_VIOLATION",
+            "Roles from different groups cannot be assigned to the same user", HttpStatus.BAD_REQUEST),
+    INVALID_INVITATION_ROLE("INVALID_INVITATION_ROLE", "Only HR or INTERVIEWER roles can be invited",
+            HttpStatus.BAD_REQUEST),
+
+    // AI
+    AI_SERVICE_UNAVAILABLE("AI_SERVICE_UNAVAILABLE", "AI service is temporarily unavailable",
+            HttpStatus.SERVICE_UNAVAILABLE),
+    AI_INVALID_RESPONSE("AI_INVALID_RESPONSE", "AI service returned an invalid response",
+            HttpStatus.BAD_GATEWAY),
+
     // Generic
     CONFLICT("CONFLICT", "Resource already exists", HttpStatus.CONFLICT);
 

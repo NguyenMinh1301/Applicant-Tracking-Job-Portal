@@ -36,6 +36,7 @@ public class SecurityConfig {
     private static final String[] publicAuthEndpoints = {
         "/vietrecruit/auth/login",
         "/vietrecruit/auth/register",
+        "/vietrecruit/auth/register/invite",
         "/vietrecruit/auth/refresh",
         "/vietrecruit/auth/forgot-password",
         "/vietrecruit/auth/reset-password",

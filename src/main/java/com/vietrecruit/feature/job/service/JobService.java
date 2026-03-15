@@ -1,5 +1,8 @@
 package com.vietrecruit.feature.job.service;
 
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -37,4 +40,20 @@ public interface JobService {
 
     /** Gets a single published, non-deleted job for public view. */
     Job getPublicJob(UUID jobId);
+
+    Optional<Job> findJobById(UUID jobId);
+
+    Page<Job> searchPublishedJobs(
+            String keyword,
+            UUID locationId,
+            UUID categoryId,
+            BigDecimal minSalary,
+            Pageable pageable);
+
+    List<Job> findPublishedJobsWithSalary(String titleKeyword);
+
+    List<Job> findAllActiveByIds(List<UUID> ids);
+
+    com.vietrecruit.feature.job.repository.SalaryBenchmarkProjection getSalaryBenchmark(
+            UUID categoryId, UUID locationId);
 }

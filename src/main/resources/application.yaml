@@ -18,6 +18,7 @@ spring:
     password: ${POSTGRES_PASSWORD}
   flyway:
     enabled: true
+    out-of-order: true
   data:
     redis:
       host: ${REDIS_HOST}

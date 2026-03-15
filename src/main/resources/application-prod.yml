@@ -6,6 +6,23 @@ spring:
       - classpath:resilience/circuitbreaker/resilience4j-prod.yml
       - classpath:resilience/ratelimiter/resilience4j-prod.yml
       - classpath:resilience/retry/resilience4j-prod.yml
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: ${OPENAI_CHAT_MODEL}
+          temperature: 0.2
+      embedding:
+        options:
+          model: ${OPENAI_EMBEDDING_MODEL}
+    vectorstore:
+      pgvector:
+        initialize-schema: false
+        dimensions: 1536
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        table-name: ai_vector_store
 
 jpa:
   hibernate:

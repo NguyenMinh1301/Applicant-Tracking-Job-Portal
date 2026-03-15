@@ -1,10 +1,12 @@
 package com.vietrecruit.feature.auth.service;
 
+import java.util.Map;
 import java.util.UUID;
 
 import com.vietrecruit.feature.auth.dto.request.ChangePasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.ForgotPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.LoginRequest;
+import com.vietrecruit.feature.auth.dto.request.RegisterByInviteRequest;
 import com.vietrecruit.feature.auth.dto.request.RegisterRequest;
 import com.vietrecruit.feature.auth.dto.request.ResendOtpRequest;
 import com.vietrecruit.feature.auth.dto.request.ResetPasswordRequest;
@@ -17,7 +19,9 @@ public interface AuthService {
 
     LoginResponse login(LoginRequest request);
 
-    void register(RegisterRequest request);
+    Map<String, Object> register(RegisterRequest request);
+
+    void registerByInvite(RegisterByInviteRequest request);
 
     TokenRefreshResponse refresh(TokenRefreshRequest request);
 

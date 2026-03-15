@@ -20,6 +20,7 @@ import com.vietrecruit.common.security.JwtService;
 import com.vietrecruit.feature.auth.dto.request.ChangePasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.ForgotPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.LoginRequest;
+import com.vietrecruit.feature.auth.dto.request.RegisterByInviteRequest;
 import com.vietrecruit.feature.auth.dto.request.RegisterRequest;
 import com.vietrecruit.feature.auth.dto.request.ResendOtpRequest;
 import com.vietrecruit.feature.auth.dto.request.ResetPasswordRequest;
@@ -34,6 +35,8 @@ import com.vietrecruit.feature.auth.repository.UserAuthProviderRepository;
 import com.vietrecruit.feature.auth.service.AuthService;
 import com.vietrecruit.feature.candidate.entity.Candidate;
 import com.vietrecruit.feature.candidate.repository.CandidateRepository;
+import com.vietrecruit.feature.invitation.entity.Invitation;
+import com.vietrecruit.feature.invitation.repository.InvitationRepository;
 import com.vietrecruit.feature.notification.dto.EmailRequest;
 import com.vietrecruit.feature.notification.service.NotificationService;
 import com.vietrecruit.feature.user.entity.Permission;
@@ -52,7 +55,11 @@ import lombok.extern.slf4j.Slf4j;
 @Transactional(readOnly = true)
 public class AuthServiceImpl implements AuthService {
 
-    private static final String DEFAULT_ROLE = "CANDIDATE";
+    private static final String ROLE_CANDIDATE = "CANDIDATE";
+    private static final String ROLE_COMPANY_ADMIN = "COMPANY_ADMIN";
+    private static final String ACCOUNT_TYPE_CANDIDATE = "CANDIDATE";
+    private static final String ACCOUNT_TYPE_EMPLOYER = "EMPLOYER";
+    private static final Set<String> PLATFORM_ROLES = Set.of("SYSTEM_ADMIN", "CUSTOMER_SERVICE");
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final long LOCK_DURATION_MINUTES = 30;
     private static final long OTP_TTL_SECONDS = 600;
@@ -69,6 +76,7 @@ public class AuthServiceImpl implements AuthService {
     private final RoleRepository roleRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserAuthProviderRepository userAuthProviderRepository;
+    private final InvitationRepository invitationRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthCacheService authCacheService;
@@ -114,19 +122,23 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void register(RegisterRequest request) {
+    public Map<String, Object> register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new ApiException(ApiErrorCode.USER_EMAIL_CONFLICT);
         }
 
-        Role defaultRole =
+        String accountType = resolveAccountType(request.getAccountType());
+        String roleCode =
+                ACCOUNT_TYPE_EMPLOYER.equals(accountType) ? ROLE_COMPANY_ADMIN : ROLE_CANDIDATE;
+
+        Role role =
                 roleRepository
-                        .findByCode(DEFAULT_ROLE)
+                        .findByCode(roleCode)
                         .orElseThrow(
                                 () ->
                                         new ApiException(
                                                 ApiErrorCode.INTERNAL_ERROR,
-                                                "Default role not found"));
+                                                "Role not found: " + roleCode));
 
         User user =
                 User.builder()
@@ -136,11 +148,13 @@ public class AuthServiceImpl implements AuthService {
                         .phone(request.getPhone())
                         .emailVerified(false)
                         .build();
-        user.getRoles().add(defaultRole);
+        user.getRoles().add(role);
 
         userRepository.save(user);
 
-        candidateRepository.save(Candidate.builder().userId(user.getId()).build());
+        if (ACCOUNT_TYPE_CANDIDATE.equals(accountType)) {
+            candidateRepository.save(Candidate.builder().userId(user.getId()).build());
+        }
 
         String otpCode = generateOtp();
         authCacheService.storeOtp(request.getEmail(), otpCode, user.getId(), OTP_TTL_SECONDS);
@@ -154,6 +168,70 @@ public class AuthServiceImpl implements AuthService {
                         null,
                         "email-verification",
                         Map.of("otpCode", otpCode, "fullName", user.getFullName())));
+
+        return Map.of("accountType", accountType);
+    }
+
+    private String resolveAccountType(String accountType) {
+        if (accountType == null || accountType.isBlank()) {
+            return ACCOUNT_TYPE_CANDIDATE;
+        }
+        String normalized = accountType.trim().toUpperCase();
+        if (ACCOUNT_TYPE_CANDIDATE.equals(normalized) || ACCOUNT_TYPE_EMPLOYER.equals(normalized)) {
+            return normalized;
+        }
+        throw new ApiException(ApiErrorCode.INVALID_ACCOUNT_TYPE);
+    }
+
+    @Override
+    @Transactional
+    public void registerByInvite(RegisterByInviteRequest request) {
+        Invitation invitation =
+                invitationRepository
+                        .findByToken(request.getToken())
+                        .orElseThrow(() -> new ApiException(ApiErrorCode.INVITATION_NOT_FOUND));
+
+        if (!"PENDING".equals(invitation.getStatus())) {
+            throw new ApiException(ApiErrorCode.INVITATION_ALREADY_ACCEPTED);
+        }
+
+        if (invitation.getExpiresAt().isBefore(Instant.now())) {
+            throw new ApiException(ApiErrorCode.INVITATION_EXPIRED);
+        }
+
+        if (userRepository.existsByEmail(invitation.getEmail())) {
+            throw new ApiException(ApiErrorCode.USER_EMAIL_CONFLICT);
+        }
+
+        Role role =
+                roleRepository
+                        .findByCode(invitation.getRole())
+                        .orElseThrow(
+                                () ->
+                                        new ApiException(
+                                                ApiErrorCode.INTERNAL_ERROR,
+                                                "Role not found: " + invitation.getRole()));
+
+        User user =
+                User.builder()
+                        .email(invitation.getEmail())
+                        .passwordHash(passwordEncoder.encode(request.getPassword()))
+                        .fullName(request.getFullName())
+                        .companyId(invitation.getCompanyId())
+                        .emailVerified(true)
+                        .emailVerifiedAt(Instant.now())
+                        .build();
+        user.getRoles().add(role);
+        userRepository.save(user);
+
+        invitation.setStatus("ACCEPTED");
+        invitationRepository.save(invitation);
+
+        log.info(
+                "User registered via invitation: userId={}, role={}, companyId={}",
+                user.getId(),
+                invitation.getRole(),
+                invitation.getCompanyId());
     }
 
     @Override
@@ -282,7 +360,7 @@ public class AuthServiceImpl implements AuthService {
                                 () -> {
                                     Role defaultRole =
                                             roleRepository
-                                                    .findByCode(DEFAULT_ROLE)
+                                                    .findByCode(ROLE_CANDIDATE)
                                                     .orElseThrow(
                                                             () ->
                                                                     new ApiException(

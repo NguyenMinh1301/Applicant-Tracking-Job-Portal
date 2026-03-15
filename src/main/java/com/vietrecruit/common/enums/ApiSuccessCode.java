@@ -21,6 +21,11 @@ public enum ApiSuccessCode {
     AUTH_RESET_TOKEN_VALID("AUTH_RESET_TOKEN_VALID", "Reset token validated, please provide a new password"),
     AUTH_ME_SUCCESS("AUTH_ME_SUCCESS", "Current user profile retrieved successfully"),
     AUTH_CHANGE_PASSWORD_SUCCESS("AUTH_CHANGE_PASSWORD_SUCCESS", "Password changed successfully"),
+    AUTH_INVITE_REGISTER_SUCCESS("AUTH_INVITE_REGISTER_SUCCESS",
+            "Registration via invitation completed successfully"),
+
+    // Invitation
+    INVITATION_CREATE_SUCCESS("INVITATION_CREATE_SUCCESS", "Invitation sent successfully"),
 
     // User
     USER_CREATE_SUCCESS("USER_CREATE_SUCCESS", "User created successfully"),
@@ -82,6 +87,8 @@ public enum ApiSuccessCode {
     CANDIDATE_UPDATE_SUCCESS("CANDIDATE_UPDATE_SUCCESS", "Candidate profile updated successfully"),
     CANDIDATE_CV_UPLOAD_SUCCESS("CANDIDATE_CV_UPLOAD_SUCCESS", "CV uploaded successfully"),
     CANDIDATE_CV_DELETE_SUCCESS("CANDIDATE_CV_DELETE_SUCCESS", "CV deleted successfully"),
+    CANDIDATE_JOB_RECOMMENDATIONS_SUCCESS("CANDIDATE_JOB_RECOMMENDATIONS_SUCCESS",
+            "Job recommendations retrieved successfully"),
 
     // Application
     APPLICATION_CREATE_SUCCESS("APPLICATION_CREATE_SUCCESS", "Application submitted successfully"),
@@ -91,6 +98,10 @@ public enum ApiSuccessCode {
             "Application status updated successfully"),
     APPLICATION_STATUS_HISTORY_SUCCESS("APPLICATION_STATUS_HISTORY_SUCCESS",
             "Application status history retrieved successfully"),
+    APPLICATION_SCREENING_SUCCESS("APPLICATION_SCREENING_SUCCESS",
+            "Application screening results retrieved successfully"),
+    APPLICATION_SCREENING_TRIGGER_SUCCESS("APPLICATION_SCREENING_TRIGGER_SUCCESS",
+            "AI screening triggered successfully"),
 
     // Interview
     INTERVIEW_CREATE_SUCCESS("INTERVIEW_CREATE_SUCCESS", "Interview scheduled successfully"),

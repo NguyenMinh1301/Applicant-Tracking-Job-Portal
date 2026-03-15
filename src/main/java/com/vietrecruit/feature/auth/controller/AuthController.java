@@ -1,5 +1,7 @@
 package com.vietrecruit.feature.auth.controller;
 
+import java.util.Map;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
@@ -18,6 +20,7 @@ import com.vietrecruit.common.security.SecurityUtils;
 import com.vietrecruit.feature.auth.dto.request.ChangePasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.ForgotPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.LoginRequest;
+import com.vietrecruit.feature.auth.dto.request.RegisterByInviteRequest;
 import com.vietrecruit.feature.auth.dto.request.RegisterRequest;
 import com.vietrecruit.feature.auth.dto.request.ResendOtpRequest;
 import com.vietrecruit.feature.auth.dto.request.ResetPasswordRequest;
@@ -52,16 +55,38 @@ public class AuthController extends BaseController {
                 ApiResponse.success(ApiSuccessCode.AUTH_LOGIN_SUCCESS, authService.login(request)));
     }
 
-    @Operation(summary = "User Registration", description = "Registers a new user account")
+    @Operation(
+            summary = "User Registration",
+            description =
+                    "Registers a new user account. Use accountType=EMPLOYER to create an employer"
+                            + " account.")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "201",
             description = "Registration successful")
     @RateLimiter(name = "authStrict", fallbackMethod = "rateLimit")
     @PostMapping(ApiConstants.Auth.REGISTER)
-    public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody RegisterRequest request) {
-        authService.register(request);
+    public ResponseEntity<ApiResponse<Map<String, Object>>> register(
+            @Valid @RequestBody RegisterRequest request) {
+        Map<String, Object> result = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(ApiSuccessCode.AUTH_REGISTER_SUCCESS));
+                .body(ApiResponse.success(ApiSuccessCode.AUTH_REGISTER_SUCCESS, result));
+    }
+
+    @Operation(
+            summary = "Register via Invitation",
+            description =
+                    "Registers a new user using an invitation token. The role and company are"
+                            + " determined by the invitation.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "201",
+            description = "Registration via invitation successful")
+    @RateLimiter(name = "authStrict", fallbackMethod = "rateLimit")
+    @PostMapping(ApiConstants.Auth.REGISTER_INVITE)
+    public ResponseEntity<ApiResponse<Void>> registerByInvite(
+            @Valid @RequestBody RegisterByInviteRequest request) {
+        authService.registerByInvite(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(ApiSuccessCode.AUTH_INVITE_REGISTER_SUCCESS));
     }
 
     @Operation(

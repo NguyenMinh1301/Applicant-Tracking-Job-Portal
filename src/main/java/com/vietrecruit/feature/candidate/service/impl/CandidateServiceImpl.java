@@ -2,9 +2,19 @@ package com.vietrecruit.feature.candidate.service.impl;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import jakarta.persistence.criteria.Predicate;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -12,8 +22,10 @@ import org.springframework.web.multipart.MultipartFile;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.common.storage.StorageService;
+import com.vietrecruit.feature.ai.event.CvUploadedEvent;
 import com.vietrecruit.feature.candidate.dto.request.CandidateUpdateRequest;
 import com.vietrecruit.feature.candidate.dto.response.CandidateProfileResponse;
+import com.vietrecruit.feature.candidate.dto.response.CandidateSearchResult;
 import com.vietrecruit.feature.candidate.dto.response.CvUploadResponse;
 import com.vietrecruit.feature.candidate.entity.Candidate;
 import com.vietrecruit.feature.candidate.mapper.CandidateMapper;
@@ -43,6 +55,7 @@ public class CandidateServiceImpl implements CandidateService {
     private final CandidateRepository candidateRepository;
     private final CandidateMapper candidateMapper;
     private final StorageService storageService;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
     public CandidateProfileResponse getProfile(UUID userId) {
@@ -107,6 +120,25 @@ public class CandidateServiceImpl implements CandidateService {
         candidate.setCvFileSizeBytes(file.getSize());
         candidate.setCvUploadedAt(now);
         candidateRepository.save(candidate);
+
+        try {
+            CvUploadedEvent event =
+                    new CvUploadedEvent(
+                            candidate.getId(), objectKey, candidate.getCvOriginalFilename());
+            kafkaTemplate
+                    .send("ai.cv-uploaded", candidate.getId().toString(), event)
+                    .whenComplete(
+                            (result, ex) -> {
+                                if (ex != null) {
+                                    log.warn(
+                                            "Failed to publish CV uploaded event: candidateId={}",
+                                            candidate.getId(),
+                                            ex);
+                                }
+                            });
+        } catch (Exception e) {
+            log.warn("Failed to publish CV uploaded event: candidateId={}", candidate.getId(), e);
+        }
 
         if (oldCvUrl != null) {
             String oldKey = extractObjectKey(oldCvUrl);
@@ -203,5 +235,66 @@ public class CandidateServiceImpl implements CandidateService {
                         + "CV metadata cleared, orphaned object may remain.",
                 userId,
                 t.getMessage());
+    }
+
+    @Override
+    public Optional<Candidate> findActiveCandidateById(UUID candidateId) {
+        return candidateRepository.findByIdAndDeletedAtIsNull(candidateId);
+    }
+
+    @Override
+    public List<CandidateSearchResult> searchCandidates(
+            String skills, String desiredPosition, Short minYearsExperience, int limit) {
+        Specification<Candidate> spec =
+                (root, query, cb) -> {
+                    List<Predicate> predicates = new ArrayList<>();
+                    predicates.add(cb.isNull(root.get("deletedAt")));
+                    predicates.add(cb.equal(root.get("isOpenToWork"), true));
+
+                    if (desiredPosition != null && !desiredPosition.isBlank()) {
+                        predicates.add(
+                                cb.like(
+                                        cb.lower(root.get("desiredPosition")),
+                                        "%" + desiredPosition.toLowerCase() + "%"));
+                    }
+                    if (minYearsExperience != null) {
+                        predicates.add(
+                                cb.greaterThanOrEqualTo(
+                                        root.get("yearsOfExperience"), minYearsExperience));
+                    }
+
+                    return cb.and(predicates.toArray(new Predicate[0]));
+                };
+
+        Page<Candidate> page = candidateRepository.findAll(spec, PageRequest.of(0, limit));
+        var stream = page.getContent().stream();
+
+        if (skills != null && !skills.isBlank()) {
+            String[] requiredSkills =
+                    Arrays.stream(skills.split(","))
+                            .map(String::trim)
+                            .map(String::toLowerCase)
+                            .toArray(String[]::new);
+            stream =
+                    stream.filter(
+                            c -> {
+                                if (c.getSkills() == null) return false;
+                                List<String> candidateSkills =
+                                        Arrays.stream(c.getSkills())
+                                                .map(String::toLowerCase)
+                                                .toList();
+                                return Arrays.stream(requiredSkills)
+                                        .anyMatch(candidateSkills::contains);
+                            });
+        }
+
+        return stream.map(
+                        c ->
+                                new CandidateSearchResult(
+                                        c.getId(),
+                                        c.getDesiredPosition(),
+                                        c.getYearsOfExperience(),
+                                        c.getSkills()))
+                .toList();
     }
 }

@@ -25,3 +25,14 @@ resilience4j:
         permittedNumberOfCallsInHalfOpenState: 3
         eventConsumerBufferSize: 20
         registerHealthIndicator: true
+      openaiApi:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        waitDurationInOpenState: 30s
+        failureRateThreshold: 60
+        slowCallRateThreshold: 50
+        slowCallDurationThreshold: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        eventConsumerBufferSize: 20
+        registerHealthIndicator: true

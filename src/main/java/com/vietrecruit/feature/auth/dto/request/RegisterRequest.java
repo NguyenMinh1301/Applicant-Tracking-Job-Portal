@@ -46,4 +46,10 @@ public class RegisterRequest {
     @Schema(description = "User's phone number", example = "+1234567890")
     @Size(max = 50, message = "Phone must not exceed 50 characters")
     private String phone;
+
+    @Schema(
+            description = "Account type: CANDIDATE (default) or EMPLOYER",
+            example = "CANDIDATE",
+            requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private String accountType;
 }
