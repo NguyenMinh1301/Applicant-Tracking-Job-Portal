@@ -1,5 +1,6 @@
 package com.vietrecruit.feature.application.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,6 +36,10 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
             "SELECT a FROM Application a JOIN Candidate c ON a.candidateId = c.id "
                     + "WHERE c.userId = :userId AND a.deletedAt IS NULL")
     Page<Application> findByUserId(@Param("userId") UUID userId, Pageable pageable);
+
+    List<Application> findByJobIdAndDeletedAtIsNull(UUID jobId);
+
+    List<Application> findByJobIdAndAiScoreIsNullAndDeletedAtIsNull(UUID jobId);
 
     @Query(
             "SELECT a FROM Application a JOIN Job j ON a.jobId = j.id "

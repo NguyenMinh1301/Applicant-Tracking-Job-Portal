@@ -66,4 +66,13 @@ public class Application {
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    @Column(name = "ai_score")
+    private Integer aiScore;
+
+    @Column(name = "ai_score_breakdown", columnDefinition = "JSONB")
+    private String aiScoreBreakdown;
+
+    @Column(name = "ai_scored_at")
+    private Instant aiScoredAt;
 }
