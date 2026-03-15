@@ -15,7 +15,28 @@ spring:
     uris: http://localhost:9200
   ai:
     openai:
-      api-key: test-key
+      api-key: sk-test-placeholder
+      base-url: http://localhost:${wiremock.server.port:8089}
+      chat:
+        options:
+          model: gpt-4o-mini
+      embedding:
+        options:
+          model: text-embedding-3-small
+    vectorstore:
+      pgvector:
+        initialize-schema: false
+        dimensions: 1536
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        table-name: ai_vector_store
+  flyway:
+    out-of-order: true
+  config:
+    import:
+      - classpath:resilience/circuitbreaker/resilience4j-dev.yml
+      - classpath:resilience/ratelimiter/resilience4j-dev.yml
+      - classpath:resilience/retry/resilience4j-dev.yml
 
 jwt:
   secret: test-secret-key-that-is-at-least-64-bytes-long-for-hs512-algorithm-padding
@@ -30,3 +51,11 @@ vietrecruit:
   admin:
     email: test-admin@vietrecruit.site
     password: test-password
+
+cloudflare:
+  r2:
+    endpoint: http://localhost:9000
+    bucket: test-bucket
+    access-key: test-access
+    secret-key: test-secret
+    public-url: http://localhost:9000/test-bucket
