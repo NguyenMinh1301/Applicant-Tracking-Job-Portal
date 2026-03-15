@@ -5,9 +5,11 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.vietrecruit.common.ai.event.JobPublishedEvent;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.job.dto.request.JobCreateRequest;
@@ -32,6 +34,7 @@ public class JobServiceImpl implements JobService {
     private final JobRepository jobRepository;
     private final JobMapper jobMapper;
     private final QuotaGuard quotaGuard;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
     @Transactional
@@ -74,6 +77,24 @@ public class JobServiceImpl implements JobService {
                 var saved = jobRepository.save(job);
                 quotaGuard.incrementActiveJobs(companyId);
                 log.info("Published job id={} company={}", jobId, companyId);
+                try {
+                    JobPublishedEvent event =
+                            new JobPublishedEvent(
+                                    saved.getId(), saved.getCompanyId(), saved.getTitle());
+                    kafkaTemplate
+                            .send("ai.job-published", saved.getId().toString(), event)
+                            .whenComplete(
+                                    (res, ex) -> {
+                                        if (ex != null) {
+                                            log.warn(
+                                                    "Failed to publish job published event: jobId={}",
+                                                    saved.getId(),
+                                                    ex);
+                                        }
+                                    });
+                } catch (Exception e) {
+                    log.warn("Failed to publish job published event: jobId={}", saved.getId(), e);
+                }
                 return saved;
             } catch (ApiException e) {
                 if (ApiErrorCode.CONFLICT.equals(e.getErrorCode()) && attempt < maxAttempts) {

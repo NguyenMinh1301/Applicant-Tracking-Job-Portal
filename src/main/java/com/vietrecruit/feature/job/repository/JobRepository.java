@@ -1,5 +1,6 @@
 package com.vietrecruit.feature.job.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,4 +19,6 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
     Page<Job> findByCompanyIdAndDeletedAtIsNull(UUID companyId, Pageable pageable);
 
     Optional<Job> findByIdAndStatusAndDeletedAtIsNull(UUID id, JobStatus status);
+
+    List<Job> findAllByIdInAndDeletedAtIsNull(List<UUID> ids);
 }
