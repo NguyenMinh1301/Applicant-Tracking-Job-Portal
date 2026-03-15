@@ -1,8 +1,11 @@
 package com.vietrecruit.feature.candidate.controller;
 
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +30,8 @@ import com.vietrecruit.feature.candidate.dto.request.CandidateUpdateRequest;
 import com.vietrecruit.feature.candidate.dto.response.CandidateProfileResponse;
 import com.vietrecruit.feature.candidate.dto.response.CvUploadResponse;
 import com.vietrecruit.feature.candidate.service.CandidateService;
+import com.vietrecruit.feature.candidate.service.RecommendationService;
+import com.vietrecruit.feature.job.dto.response.JobRecommendationResponse;
 
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,6 +46,7 @@ import lombok.RequiredArgsConstructor;
 public class CandidateController extends BaseController {
 
     private final CandidateService candidateService;
+    private final RecommendationService recommendationService;
 
     @Operation(
             summary = "Get My Profile",
@@ -95,6 +101,22 @@ public class CandidateController extends BaseController {
         var userId = SecurityUtils.getCurrentUserId();
         candidateService.deleteCv(userId);
         return ResponseEntity.ok(ApiResponse.success(ApiSuccessCode.CANDIDATE_CV_DELETE_SUCCESS));
+    }
+
+    @Operation(
+            summary = "Get Job Recommendations",
+            description =
+                    "Returns semantically matched job recommendations based on the candidate's CV")
+    @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    @GetMapping(ApiConstants.Candidate.ME_JOB_RECOMMENDATIONS)
+    public ResponseEntity<ApiResponse<List<JobRecommendationResponse>>> getJobRecommendations(
+            @RequestParam(defaultValue = "10") @Min(1) @Max(50) int limit) {
+        var userId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        ApiSuccessCode.CANDIDATE_JOB_RECOMMENDATIONS_SUCCESS,
+                        recommendationService.getJobRecommendations(userId, limit)));
     }
 
     @Operation(
