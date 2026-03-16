@@ -1,4 +1,4 @@
-package com.vietrecruit.feature.ai.agent;
+package com.vietrecruit.feature.ai.shared.service;
 
 import java.util.List;
 
@@ -8,6 +8,8 @@ import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+
+import com.vietrecruit.feature.ai.shared.memory.AgentMemoryStore;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;

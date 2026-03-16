@@ -1,4 +1,4 @@
-package com.vietrecruit.feature.ai.embedding;
+package com.vietrecruit.feature.ai.shared.service;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;

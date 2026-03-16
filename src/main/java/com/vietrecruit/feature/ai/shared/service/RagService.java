@@ -1,4 +1,4 @@
-package com.vietrecruit.feature.ai.rag;
+package com.vietrecruit.feature.ai.shared.service;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -9,12 +9,12 @@ import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
-import com.vietrecruit.feature.ai.embedding.EmbeddingService;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -82,6 +82,28 @@ public class RagService {
         } finally {
             MDC.remove("ai_model");
         }
+    }
+
+    public List<Document> retrieveKnowledge(String query, String category, int topK) {
+        Filter.Expression typeFilter =
+                new Filter.Expression(
+                        Filter.ExpressionType.EQ,
+                        new Filter.Key("type"),
+                        new Filter.Value("knowledge"));
+
+        Filter.Expression filter;
+        if (category != null && !category.isBlank()) {
+            Filter.Expression categoryFilter =
+                    new Filter.Expression(
+                            Filter.ExpressionType.EQ,
+                            new Filter.Key("category"),
+                            new Filter.Value(category));
+            filter = new Filter.Expression(Filter.ExpressionType.AND, typeFilter, categoryFilter);
+        } else {
+            filter = typeFilter;
+        }
+
+        return embeddingService.search(query, topK, filter);
     }
 
     @SuppressWarnings("unused")
