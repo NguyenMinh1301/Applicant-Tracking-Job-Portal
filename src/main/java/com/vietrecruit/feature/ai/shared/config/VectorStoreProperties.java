@@ -1,4 +1,4 @@
-package com.vietrecruit.feature.ai.config;
+package com.vietrecruit.feature.ai.shared.config;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
