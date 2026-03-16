@@ -4,3 +4,6 @@
 [submodule "docs"]
 	path = docs
 	url = https://github.com/VietRecruit/BE-Document.git
+[submodule "knowledge"]
+	path = knowledge
+	url = https://github.com/VietRecruit/Knowledge.git
