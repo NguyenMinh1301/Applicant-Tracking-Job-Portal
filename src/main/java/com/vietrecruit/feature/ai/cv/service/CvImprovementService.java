@@ -1,4 +1,10 @@
 package com.vietrecruit.feature.ai.cv.service;
 
-// TODO: implement in prompt-02-cv-improvement
-public interface CvImprovementService {}
+import java.util.UUID;
+
+import com.vietrecruit.feature.ai.cv.dto.CvImprovementResponse;
+
+public interface CvImprovementService {
+
+    CvImprovementResponse analyze(UUID userId);
+}

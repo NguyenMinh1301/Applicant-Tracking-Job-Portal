@@ -1,4 +1,13 @@
 package com.vietrecruit.feature.ai.cv.dto;
 
-// TODO: implement in prompt-02-cv-improvement
-public record CvImprovementResponse() {}
+import java.time.Instant;
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+public record CvImprovementResponse(
+        int overallScore,
+        List<CvSuggestion> suggestions,
+        List<String> strengths,
+        Instant analysedAt) {}
