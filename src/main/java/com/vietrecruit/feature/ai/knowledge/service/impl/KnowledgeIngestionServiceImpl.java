@@ -50,6 +50,7 @@ public class KnowledgeIngestionServiceImpl implements KnowledgeIngestionService 
     private static final long MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
     private static final int MIN_CHUNK_TOKENS = 100;
     private static final int MAX_CHUNK_TOKENS = 800;
+    private static final int MAX_CHUNKS_PER_DOCUMENT = 50;
     private static final Pattern MARKDOWN_HEADING = Pattern.compile("(?m)^##\\s+");
 
     private final KnowledgeDocumentRepository repository;
@@ -159,6 +160,12 @@ public class KnowledgeIngestionServiceImpl implements KnowledgeIngestionService 
                                             ApiErrorCode.NOT_FOUND, "Knowledge document not found");
                                 });
 
+        // Idempotency guard: skip if already processed
+        if ("INDEXED".equals(doc.getStatus())) {
+            log.info("Knowledge ingestion: document already indexed, skipping: id={}", documentId);
+            return;
+        }
+
         try {
             String fullText = fetchAndParseFromR2(fileKey);
             if (fullText == null || fullText.isBlank()) {
@@ -177,6 +184,16 @@ public class KnowledgeIngestionServiceImpl implements KnowledgeIngestionService 
                 repository.save(doc);
                 log.error("Knowledge ingestion: no valid chunks produced: id={}", documentId);
                 return;
+            }
+
+            // Cap chunks to prevent unbounded OpenAI embedding calls
+            if (chunks.size() > MAX_CHUNKS_PER_DOCUMENT) {
+                log.warn(
+                        "Knowledge ingestion: truncating chunks from {} to {} for id={}",
+                        chunks.size(),
+                        MAX_CHUNKS_PER_DOCUMENT,
+                        documentId);
+                chunks = chunks.subList(0, MAX_CHUNKS_PER_DOCUMENT);
             }
 
             int successCount = 0;

@@ -1,5 +1,6 @@
 package com.vietrecruit.feature.ai.ingestion.consumer;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -19,6 +20,7 @@ import com.vietrecruit.feature.candidate.entity.Candidate;
 import com.vietrecruit.feature.candidate.service.CandidateService;
 import com.vietrecruit.feature.job.entity.Job;
 import com.vietrecruit.feature.job.service.JobService;
+import com.vietrecruit.feature.location.repository.LocationRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +38,7 @@ public class AiIngestionConsumer {
     private final EmbeddingService embeddingService;
     private final CandidateService candidateService;
     private final JobService jobService;
+    private final LocationRepository locationRepository;
     private final S3Client s3Client;
 
     @Value("${cloudflare.r2.bucket}")
@@ -49,44 +52,36 @@ public class AiIngestionConsumer {
     @KafkaListener(topics = TOPIC_CV_UPLOADED, groupId = "ai-ingestion-cv-group")
     public void consumeCvUploaded(CvUploadedEvent event) {
         log.info("AI ingestion: CV uploaded event received: candidateId={}", event.candidateId());
-        try {
-            Candidate candidate =
-                    candidateService.findActiveCandidateById(event.candidateId()).orElse(null);
 
-            if (candidate == null) {
-                log.warn(
-                        "AI ingestion: candidate not found, skipping: candidateId={}",
-                        event.candidateId());
-                return;
-            }
+        Candidate candidate =
+                candidateService.findActiveCandidateById(event.candidateId()).orElse(null);
 
-            String cvText = candidate.getParsedCvText();
-            if (cvText == null || cvText.isBlank()) {
-                cvText = fetchAndParseCvFromR2(event.cvFileKey());
-            }
-
-            if (cvText == null || cvText.isBlank()) {
-                log.warn(
-                        "AI ingestion: no CV text available for candidateId={}",
-                        event.candidateId());
-                return;
-            }
-
-            Map<String, Object> metadata =
-                    Map.of(
-                            "type", "cv",
-                            "candidateId", event.candidateId().toString(),
-                            "email", event.candidateEmail());
-
-            embeddingService.embedAndStore("cv-" + event.candidateId(), cvText, metadata);
-
-            log.info("AI ingestion: CV embedded successfully: candidateId={}", event.candidateId());
-        } catch (Exception e) {
-            log.error(
-                    "AI ingestion: failed to process CV: candidateId={}, error={}",
-                    event.candidateId(),
-                    e.getMessage());
+        if (candidate == null) {
+            log.warn(
+                    "AI ingestion: candidate not found, skipping: candidateId={}",
+                    event.candidateId());
+            return;
         }
+
+        String cvText = candidate.getParsedCvText();
+        if (cvText == null || cvText.isBlank()) {
+            cvText = fetchAndParseCvFromR2(event.cvFileKey());
+        }
+
+        if (cvText == null || cvText.isBlank()) {
+            log.warn("AI ingestion: no CV text available for candidateId={}", event.candidateId());
+            return;
+        }
+
+        Map<String, Object> metadata =
+                Map.of(
+                        "type", "cv",
+                        "candidateId", event.candidateId().toString(),
+                        "email", event.candidateEmail());
+
+        embeddingService.embedAndStore("cv-" + event.candidateId(), cvText, metadata);
+
+        log.info("AI ingestion: CV embedded successfully: candidateId={}", event.candidateId());
     }
 
     @RetryableTopic(
@@ -97,40 +92,44 @@ public class AiIngestionConsumer {
     @KafkaListener(topics = TOPIC_JOB_PUBLISHED, groupId = "ai-ingestion-job-group")
     public void consumeJobPublished(JobPublishedEvent event) {
         log.info("AI ingestion: Job published event received: jobId={}", event.jobId());
-        try {
-            Job job = jobService.findJobById(event.jobId()).orElse(null);
 
-            if (job == null) {
-                log.warn("AI ingestion: job not found, skipping: jobId={}", event.jobId());
-                return;
-            }
+        Job job = jobService.findJobById(event.jobId()).orElse(null);
 
-            StringBuilder textBuilder = new StringBuilder();
-            textBuilder.append("Job Title: ").append(job.getTitle()).append("\n");
-            if (job.getDescription() != null) {
-                textBuilder.append("Description: ").append(job.getDescription()).append("\n");
-            }
-            if (job.getRequirements() != null) {
-                textBuilder.append("Requirements: ").append(job.getRequirements()).append("\n");
-            }
-
-            Map<String, Object> metadata =
-                    Map.of(
-                            "type", "job",
-                            "jobId", event.jobId().toString(),
-                            "employerId", event.employerId().toString(),
-                            "title", event.jobTitle());
-
-            embeddingService.embedAndStore(
-                    "job-" + event.jobId(), textBuilder.toString(), metadata);
-
-            log.info("AI ingestion: Job embedded successfully: jobId={}", event.jobId());
-        } catch (Exception e) {
-            log.error(
-                    "AI ingestion: failed to process job: jobId={}, error={}",
-                    event.jobId(),
-                    e.getMessage());
+        if (job == null) {
+            log.warn("AI ingestion: job not found, skipping: jobId={}", event.jobId());
+            return;
         }
+
+        StringBuilder textBuilder = new StringBuilder();
+        textBuilder.append("Job Title: ").append(job.getTitle()).append("\n");
+        if (job.getDescription() != null) {
+            textBuilder.append("Description: ").append(job.getDescription()).append("\n");
+        }
+        if (job.getRequirements() != null) {
+            textBuilder.append("Requirements: ").append(job.getRequirements()).append("\n");
+        }
+
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("type", "job");
+        metadata.put("jobId", event.jobId().toString());
+        metadata.put("employerId", event.employerId().toString());
+        metadata.put("title", event.jobTitle());
+        metadata.put("hasSalary", job.getMinSalary() != null ? "true" : "false");
+        if (job.getMinSalary() != null) {
+            metadata.put("salaryMin", job.getMinSalary().toPlainString());
+        }
+        if (job.getMaxSalary() != null) {
+            metadata.put("salaryMax", job.getMaxSalary().toPlainString());
+        }
+        if (job.getLocationId() != null) {
+            locationRepository
+                    .findById(job.getLocationId())
+                    .ifPresent(loc -> metadata.put("locationName", loc.getName()));
+        }
+
+        embeddingService.embedAndStore("job-" + event.jobId(), textBuilder.toString(), metadata);
+
+        log.info("AI ingestion: Job embedded successfully: jobId={}", event.jobId());
     }
 
     @DltHandler
