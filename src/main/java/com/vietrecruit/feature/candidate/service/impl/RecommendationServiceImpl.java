@@ -25,7 +25,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
-import com.vietrecruit.feature.ai.embedding.EmbeddingService;
+import com.vietrecruit.feature.ai.shared.service.EmbeddingService;
 import com.vietrecruit.feature.candidate.entity.Candidate;
 import com.vietrecruit.feature.candidate.mapper.RecommendationMapper;
 import com.vietrecruit.feature.candidate.repository.CandidateRepository;

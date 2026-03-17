@@ -22,7 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.common.storage.StorageService;
-import com.vietrecruit.feature.ai.event.CvUploadedEvent;
+import com.vietrecruit.feature.ai.shared.event.CvUploadedEvent;
 import com.vietrecruit.feature.candidate.dto.request.CandidateUpdateRequest;
 import com.vietrecruit.feature.candidate.dto.response.CandidateProfileResponse;
 import com.vietrecruit.feature.candidate.dto.response.CandidateSearchResult;

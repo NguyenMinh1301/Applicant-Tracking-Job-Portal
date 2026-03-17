@@ -6,8 +6,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import com.vietrecruit.feature.ai.config.AiProperties;
-import com.vietrecruit.feature.ai.config.VectorStoreProperties;
+import com.vietrecruit.feature.ai.shared.config.AiProperties;
+import com.vietrecruit.feature.ai.shared.config.VectorStoreProperties;
 
 @EnableAsync
 @EnableScheduling

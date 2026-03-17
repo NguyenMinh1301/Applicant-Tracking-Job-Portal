@@ -160,6 +160,20 @@ public enum ApiErrorCode {
             HttpStatus.SERVICE_UNAVAILABLE),
     AI_INVALID_RESPONSE("AI_INVALID_RESPONSE", "AI service returned an invalid response",
             HttpStatus.BAD_GATEWAY),
+    CV_NOT_PARSED("CV_NOT_PARSED", "CV text not available. Please upload your CV first.",
+            HttpStatus.UNPROCESSABLE_ENTITY),
+    CV_IMPROVEMENT_UNAVAILABLE("CV_IMPROVEMENT_UNAVAILABLE", "CV analysis is temporarily unavailable.",
+            HttpStatus.SERVICE_UNAVAILABLE),
+    INTERVIEW_QUESTIONS_UNAVAILABLE("INTERVIEW_QUESTIONS_UNAVAILABLE",
+            "Question generation temporarily unavailable.", HttpStatus.SERVICE_UNAVAILABLE),
+    CV_NOT_AVAILABLE_FOR_INTERVIEW("CV_NOT_AVAILABLE_FOR_INTERVIEW",
+            "Candidate CV not parsed. Cannot generate questions.", HttpStatus.UNPROCESSABLE_ENTITY),
+    SALARY_BENCHMARK_UNAVAILABLE("SALARY_BENCHMARK_UNAVAILABLE", "Salary benchmark temporarily unavailable.",
+            HttpStatus.SERVICE_UNAVAILABLE),
+    JD_GENERATION_UNAVAILABLE("JD_GENERATION_UNAVAILABLE", "JD generation temporarily unavailable.",
+            HttpStatus.SERVICE_UNAVAILABLE),
+    DEPARTMENT_NOT_FOUND("DEPARTMENT_NOT_FOUND", "Department not found or does not belong to your company.",
+            HttpStatus.NOT_FOUND),
 
     // Generic
     CONFLICT("CONFLICT", "Resource already exists", HttpStatus.CONFLICT);

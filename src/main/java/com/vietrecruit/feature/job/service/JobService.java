@@ -54,6 +54,9 @@ public interface JobService {
 
     List<Job> findAllActiveByIds(List<UUID> ids);
 
+    /** Overwrites the description field of any non-deleted job owned by the company. */
+    void updateDescription(UUID companyId, UUID jobId, String description);
+
     com.vietrecruit.feature.job.repository.SalaryBenchmarkProjection getSalaryBenchmark(
             UUID categoryId, UUID locationId);
 }

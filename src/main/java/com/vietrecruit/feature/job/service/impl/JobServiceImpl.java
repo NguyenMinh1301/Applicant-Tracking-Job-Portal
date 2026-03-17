@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
-import com.vietrecruit.feature.ai.event.JobPublishedEvent;
+import com.vietrecruit.feature.ai.shared.event.JobPublishedEvent;
 import com.vietrecruit.feature.job.dto.request.JobCreateRequest;
 import com.vietrecruit.feature.job.dto.request.JobUpdateRequest;
 import com.vietrecruit.feature.job.entity.Job;
@@ -258,5 +258,13 @@ public class JobServiceImpl implements JobService {
     public com.vietrecruit.feature.job.repository.SalaryBenchmarkProjection getSalaryBenchmark(
             UUID categoryId, UUID locationId) {
         return jobRepository.getSalaryBenchmark(categoryId, locationId);
+    }
+
+    @Override
+    @Transactional
+    public void updateDescription(UUID companyId, UUID jobId, String description) {
+        var job = findJobByIdAndCompany(companyId, jobId);
+        job.setDescription(description);
+        jobRepository.save(job);
     }
 }

@@ -63,3 +63,10 @@ resilience4j:
         limitRefreshPeriod: 60s
         timeoutDuration: 5s
         registerHealthIndicator: true
+
+      # JD Generator (gpt-4o, higher cost)
+      jdGenerator:
+        limitForPeriod: 10
+        limitRefreshPeriod: 60s
+        timeoutDuration: 0
+        registerHealthIndicator: true
