@@ -37,7 +37,13 @@ public class RagService {
     @Retry(name = "openaiApi")
     @CircuitBreaker(name = "openaiApi", fallbackMethod = "generateFallback")
     public String generate(String userQuery, String systemContext, int topK) {
-        List<Document> relevantDocs = embeddingService.search(userQuery, topK);
+        // Always filter by type=knowledge to prevent cross-contamination with CV/job embeddings
+        Filter.Expression typeFilter =
+                new Filter.Expression(
+                        Filter.ExpressionType.EQ,
+                        new Filter.Key("type"),
+                        new Filter.Value("knowledge"));
+        List<Document> relevantDocs = embeddingService.search(userQuery, topK, typeFilter);
 
         String context =
                 relevantDocs.stream().map(Document::getText).collect(Collectors.joining("\n---\n"));

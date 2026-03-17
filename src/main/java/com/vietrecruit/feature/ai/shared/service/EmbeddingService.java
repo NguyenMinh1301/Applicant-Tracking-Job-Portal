@@ -37,10 +37,18 @@ public class EmbeddingService {
     private static final String CACHE_KEY_PREFIX = "ai:emb:";
     private static final long CACHE_TTL_HOURS = 24;
 
+    @CircuitBreaker(name = "openaiApi", fallbackMethod = "embedAndStoreFallback")
     public void embedAndStore(String id, String content, Map<String, Object> metadata) {
         Document doc = new Document(id, content, metadata);
         vectorStore.add(List.of(doc));
         log.debug("Stored embedding: id={}, metadataKeys={}", id, metadata.keySet());
+    }
+
+    @SuppressWarnings("unused")
+    private void embedAndStoreFallback(
+            String id, String content, Map<String, Object> metadata, Throwable t) {
+        log.error("Embedding storage circuit open: id={}, cause={}", id, t.getMessage());
+        throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE);
     }
 
     public List<Document> search(String query, int topK, Filter.Expression filter) {
