@@ -89,6 +89,7 @@ public enum ApiSuccessCode {
     CANDIDATE_CV_DELETE_SUCCESS("CANDIDATE_CV_DELETE_SUCCESS", "CV deleted successfully"),
     CANDIDATE_JOB_RECOMMENDATIONS_SUCCESS("CANDIDATE_JOB_RECOMMENDATIONS_SUCCESS",
             "Job recommendations retrieved successfully"),
+    CV_IMPROVEMENT_SUCCESS("CV_IMPROVEMENT_SUCCESS", "CV improvement analysis completed successfully"),
 
     // Application
     APPLICATION_CREATE_SUCCESS("APPLICATION_CREATE_SUCCESS", "Application submitted successfully"),
@@ -109,6 +110,10 @@ public enum ApiSuccessCode {
     INTERVIEW_LIST_SUCCESS("INTERVIEW_LIST_SUCCESS", "Interview list retrieved successfully"),
     INTERVIEW_STATUS_UPDATE_SUCCESS("INTERVIEW_STATUS_UPDATE_SUCCESS",
             "Interview status updated successfully"),
+    INTERVIEW_QUESTIONS_GENERATED("INTERVIEW_QUESTIONS_GENERATED",
+            "Interview questions generated successfully"),
+    INTERVIEW_QUESTIONS_FETCH_SUCCESS("INTERVIEW_QUESTIONS_FETCH_SUCCESS",
+            "Interview questions retrieved successfully"),
 
     // Scorecard
     SCORECARD_CREATE_SUCCESS("SCORECARD_CREATE_SUCCESS", "Scorecard submitted successfully"),
@@ -121,6 +126,11 @@ public enum ApiSuccessCode {
     OFFER_SEND_SUCCESS("OFFER_SEND_SUCCESS", "Offer sent successfully"),
     OFFER_RESPOND_SUCCESS("OFFER_RESPOND_SUCCESS", "Offer response recorded successfully"),
     OFFER_DELETE_SUCCESS("OFFER_DELETE_SUCCESS", "Offer deleted successfully"),
+
+    // Knowledge
+    SALARY_BENCHMARK_SUCCESS("SALARY_BENCHMARK_SUCCESS", "Salary benchmark retrieved successfully"),
+    JD_GENERATION_SUCCESS("JD_GENERATION_SUCCESS", "Job description generated successfully"),
+    JD_APPLY_SUCCESS("JD_APPLY_SUCCESS", "Job description applied successfully"),
 
     // Knowledge
     KNOWLEDGE_UPLOAD_ACCEPTED("KNOWLEDGE_UPLOAD_ACCEPTED", "Knowledge document upload accepted for processing"),

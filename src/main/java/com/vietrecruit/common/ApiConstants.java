@@ -99,8 +99,11 @@ public final class ApiConstants {
         public static final String UPDATE = "/{id}";
         public static final String PUBLISH = "/{id}/publish";
         public static final String CLOSE = "/{id}/close";
+        public static final String SALARY_BENCHMARK = "/{id}/salary-benchmark";
         public static final String PUBLIC_ROOT = "/public";
         public static final String PUBLIC_GET = "/public/{id}";
+        public static final String AI_GENERATE_DESCRIPTION = "/ai/generate-description";
+        public static final String AI_APPLY_DESCRIPTION = "/{id}/ai/apply-description";
     }
 
     public static final class Company {
@@ -144,6 +147,8 @@ public final class ApiConstants {
         public static final String ME = "/me";
         public static final String ME_CV = "/me/cv";
         public static final String ME_JOB_RECOMMENDATIONS = "/me/job-recommendations";
+        public static final String ME_CV_IMPROVEMENT = "/me/cv/improvement";
+        public static final String ME_SALARY_BENCHMARK = "/me/salary-benchmark";
         public static final String GET = "/{id}";
     }
 
@@ -168,6 +173,8 @@ public final class ApiConstants {
         public static final String GET = "/{id}";
         public static final String STATUS = "/{id}/status";
         public static final String SCORECARDS = "/{id}/scorecards";
+        public static final String QUESTIONS = "/{id}/questions";
+        public static final String QUESTIONS_GENERATE = "/{id}/questions/generate";
     }
 
     public static final class Offer {
