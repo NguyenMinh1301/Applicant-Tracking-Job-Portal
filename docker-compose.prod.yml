@@ -256,7 +256,7 @@ services:
     user: root
     hostname: grafana
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
       - GF_USERS_ALLOW_SING_UP=false
       - GF_SERVER_DOMAIN=localhost
     volumes:
