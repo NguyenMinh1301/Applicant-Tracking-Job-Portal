@@ -19,6 +19,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.vietrecruit.feature.job.enums.JobStatus;
 
 import lombok.AllArgsConstructor;
@@ -34,6 +35,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "jobs")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Job {
 
     @Id
@@ -80,6 +82,25 @@ public class Job {
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
     private JobStatus status = JobStatus.DRAFT;
+
+    @Builder.Default
+    @Column(name = "view_count")
+    private Integer viewCount = 0;
+
+    @Builder.Default
+    @Column(name = "application_count")
+    private Integer applicationCount = 0;
+
+    @Builder.Default
+    @Column(name = "is_hot")
+    private Boolean isHot = false;
+
+    @Builder.Default
+    @Column(name = "is_featured")
+    private Boolean isFeatured = false;
+
+    @Column(name = "published_at")
+    private Instant publishedAt;
 
     private LocalDate deadline;
 

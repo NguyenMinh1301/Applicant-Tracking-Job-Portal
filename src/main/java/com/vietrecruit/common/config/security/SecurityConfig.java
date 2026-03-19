@@ -57,6 +57,9 @@ public class SecurityConfig {
         "/vietrecruit/plans/**",
         "/vietrecruit/webhooks/**",
         "/vietrecruit/jobs/public/**",
+        "/vietrecruit/jobs/search",
+        "/vietrecruit/jobs/autocomplete",
+        "/vietrecruit/companies/search",
         "/actuator/**",
         "/actuator/prometheus",
         "/health/**"

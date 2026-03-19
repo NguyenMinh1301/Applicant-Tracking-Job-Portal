@@ -19,4 +19,4 @@ COPY --from=build /app/target/*.jar app.jar
 ENV ACTIVE_PROFILE=${PROFILE}
 ENV JAR_VERSION=${APP_VERSION}
 
-ENTRYPOINT ["java", "-jar", "-Dspring.profiles.active=${ACTIVE_PROFILE}", "app.jar"]
+ENTRYPOINT java -jar -Dspring.profiles.active=${ACTIVE_PROFILE} app.jar

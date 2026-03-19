@@ -15,6 +15,8 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.vietrecruit.common.config.cache.CacheEventPublisher;
+import com.vietrecruit.common.config.cache.CacheNames;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.ai.shared.event.JobPublishedEvent;
@@ -41,6 +43,7 @@ public class JobServiceImpl implements JobService {
     private final JobMapper jobMapper;
     private final QuotaGuard quotaGuard;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final CacheEventPublisher cacheEventPublisher;
 
     @Override
     @Transactional
@@ -49,7 +52,9 @@ public class JobServiceImpl implements JobService {
         job.setCompanyId(companyId);
         job.setCreatedBy(createdBy);
         job.setStatus(JobStatus.DRAFT);
-        return jobRepository.save(job);
+        var saved = jobRepository.save(job);
+        cacheEventPublisher.publish("job", "created", saved.getId(), companyId);
+        return saved;
     }
 
     @Override
@@ -62,7 +67,9 @@ public class JobServiceImpl implements JobService {
         }
 
         jobMapper.updateEntity(request, job);
-        return jobRepository.save(job);
+        var saved = jobRepository.save(job);
+        cacheEventPublisher.publish("job", "updated", saved.getId(), companyId);
+        return saved;
     }
 
     @Override
@@ -80,9 +87,11 @@ public class JobServiceImpl implements JobService {
             try {
                 quotaGuard.validateCanPublishJob(companyId);
                 job.setStatus(JobStatus.PUBLISHED);
+                job.setPublishedAt(java.time.Instant.now());
                 var saved = jobRepository.save(job);
                 quotaGuard.incrementActiveJobs(companyId);
                 log.info("Published job id={} company={}", jobId, companyId);
+                cacheEventPublisher.publish("job", "published", saved.getId(), companyId);
                 try {
                     JobPublishedEvent event =
                             new JobPublishedEvent(
@@ -135,6 +144,7 @@ public class JobServiceImpl implements JobService {
         quotaGuard.decrementActiveJobs(companyId);
 
         log.info("Closed job id={} company={}", jobId, companyId);
+        cacheEventPublisher.publish("job", "closed", saved.getId(), companyId);
         return saved;
     }
 
@@ -167,6 +177,7 @@ public class JobServiceImpl implements JobService {
     }
 
     @Override
+    @org.springframework.cache.annotation.Cacheable(value = CacheNames.JOB_DETAIL, key = "#jobId")
     public Job getPublicJob(UUID jobId) {
         return jobRepository
                 .findByIdAndStatusAndDeletedAtIsNull(jobId, JobStatus.PUBLISHED)
@@ -266,5 +277,6 @@ public class JobServiceImpl implements JobService {
         var job = findJobByIdAndCompany(companyId, jobId);
         job.setDescription(description);
         jobRepository.save(job);
+        cacheEventPublisher.publish("job", "updated", jobId, companyId);
     }
 }

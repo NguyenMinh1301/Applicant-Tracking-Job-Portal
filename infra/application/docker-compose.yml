@@ -114,7 +114,10 @@ services:
     restart: "no"
 
   elasticsearch:
-    image: elasticsearch:7.17.25
+    build:
+      context: ../../elk
+      dockerfile: elasticsearch.Dockerfile
+    image: vr-elasticsearch:8.17.0
     container_name: vr-elasticsearch
     volumes:
       - ../../elk/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
@@ -138,7 +141,7 @@ services:
           memory: 2G
 
   logstash:
-    image: logstash:7.17.25
+    image: docker.elastic.co/logstash/logstash:8.17.0
     container_name: vr-logstash
     volumes:
       - ../../elk/logstash.yml:/usr/share/logstash/config/logstash.yml
@@ -156,7 +159,7 @@ services:
       - elasticsearch
 
   kibana:
-    image: kibana:7.17.25
+    image: docker.elastic.co/kibana/kibana:8.17.0
     container_name: vr-kibana
     volumes:
       - ../../elk/kibana.yml:/usr/share/kibana/config/kibana.yml

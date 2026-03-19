@@ -8,6 +8,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.vietrecruit.common.config.cache.CacheEventPublisher;
+import com.vietrecruit.common.config.cache.CacheNames;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.location.dto.request.LocationRequest;
@@ -25,6 +27,7 @@ public class LocationServiceImpl implements LocationService {
 
     private final LocationRepository locationRepository;
     private final LocationMapper locationMapper;
+    private final CacheEventPublisher cacheEventPublisher;
 
     @Override
     @Transactional
@@ -37,7 +40,9 @@ public class LocationServiceImpl implements LocationService {
         location.setCompanyId(companyId);
         location.setCreatedBy(userId);
         location.setUpdatedBy(userId);
-        return locationMapper.toResponse(locationRepository.save(location));
+        var saved = locationRepository.save(location);
+        cacheEventPublisher.publish("location", "created", saved.getId(), companyId);
+        return locationMapper.toResponse(saved);
     }
 
     @Override
@@ -53,17 +58,25 @@ public class LocationServiceImpl implements LocationService {
 
         locationMapper.updateEntity(request, location);
         location.setUpdatedBy(userId);
-        return locationMapper.toResponse(locationRepository.save(location));
+        var saved = locationRepository.save(location);
+        cacheEventPublisher.publish("location", "updated", saved.getId(), companyId);
+        return locationMapper.toResponse(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(
+            value = CacheNames.LOCATION_DETAIL,
+            key = "#companyId + '::' + #locationId")
     public LocationResponse getLocation(UUID companyId, UUID locationId) {
         return locationMapper.toResponse(findByIdAndCompany(locationId, companyId));
     }
 
     @Override
     @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(
+            value = CacheNames.LOCATION_LIST,
+            key = "#companyId")
     public Page<LocationResponse> listLocations(UUID companyId, Pageable pageable) {
         return locationRepository
                 .findByCompanyId(companyId, pageable)
@@ -77,6 +90,7 @@ public class LocationServiceImpl implements LocationService {
         try {
             locationRepository.delete(location);
             locationRepository.flush();
+            cacheEventPublisher.publish("location", "deleted", locationId, companyId);
         } catch (DataIntegrityViolationException e) {
             throw new ApiException(
                     ApiErrorCode.BAD_REQUEST,

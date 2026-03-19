@@ -25,10 +25,14 @@ import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.common.base.BaseController;
 import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.response.ApiResponse;
+import com.vietrecruit.common.response.SearchPageResponse;
 import com.vietrecruit.common.security.SecurityUtils;
+import com.vietrecruit.feature.candidate.dto.request.CandidateSearchRequest;
 import com.vietrecruit.feature.candidate.dto.request.CandidateUpdateRequest;
 import com.vietrecruit.feature.candidate.dto.response.CandidateProfileResponse;
+import com.vietrecruit.feature.candidate.dto.response.CandidateSearchResponse;
 import com.vietrecruit.feature.candidate.dto.response.CvUploadResponse;
+import com.vietrecruit.feature.candidate.service.CandidateSearchService;
 import com.vietrecruit.feature.candidate.service.CandidateService;
 import com.vietrecruit.feature.candidate.service.RecommendationService;
 import com.vietrecruit.feature.job.dto.response.JobRecommendationResponse;
@@ -46,6 +50,7 @@ import lombok.RequiredArgsConstructor;
 public class CandidateController extends BaseController {
 
     private final CandidateService candidateService;
+    private final CandidateSearchService candidateSearchService;
     private final RecommendationService recommendationService;
 
     @Operation(
@@ -117,6 +122,38 @@ public class CandidateController extends BaseController {
                 ApiResponse.success(
                         ApiSuccessCode.CANDIDATE_JOB_RECOMMENDATIONS_SUCCESS,
                         recommendationService.getJobRecommendations(userId, limit)));
+    }
+
+    @Operation(
+            summary = "Search Candidates",
+            description = "Full-text search across candidate profiles (employer-only)")
+    @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyRole('HR', 'COMPANY_ADMIN', 'SYSTEM_ADMIN')")
+    @GetMapping(ApiConstants.Candidate.SEARCH)
+    public ResponseEntity<ApiResponse<SearchPageResponse<CandidateSearchResponse>>>
+            searchCandidates(
+                    @RequestParam(required = false) String q,
+                    @RequestParam(required = false) String[] skills,
+                    @RequestParam(required = false) Short experienceMin,
+                    @RequestParam(required = false) Boolean isOpenToWork,
+                    @RequestParam(required = false) String educationLevel,
+                    @RequestParam(required = false) String workType,
+                    @RequestParam(defaultValue = "0") int page,
+                    @RequestParam(defaultValue = "20") int size) {
+        var request =
+                CandidateSearchRequest.builder()
+                        .q(q)
+                        .skills(skills)
+                        .experienceMin(experienceMin)
+                        .isOpenToWork(isOpenToWork)
+                        .educationLevel(educationLevel)
+                        .workType(workType)
+                        .page(page)
+                        .size(size)
+                        .build();
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        ApiSuccessCode.SEARCH_SUCCESS, candidateSearchService.search(request)));
     }
 
     @Operation(

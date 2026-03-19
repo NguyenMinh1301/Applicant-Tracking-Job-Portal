@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.vietrecruit.common.config.cache.CacheEventPublisher;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.company.dto.request.CompanyUpdateRequest;
@@ -22,9 +23,13 @@ public class CompanyServiceImpl implements CompanyService {
 
     private final CompanyRepository companyRepository;
     private final CompanyMapper companyMapper;
+    private final CacheEventPublisher cacheEventPublisher;
 
     @Override
     @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(
+            value = com.vietrecruit.common.config.cache.CacheNames.COMPANY_DETAIL,
+            key = "#companyId")
     public CompanyResponse getCompany(UUID companyId) {
         return companyMapper.toResponse(findActiveCompany(companyId));
     }
@@ -40,7 +45,9 @@ public class CompanyServiceImpl implements CompanyService {
         }
 
         companyMapper.updateEntity(request, company);
-        return companyMapper.toResponse(companyRepository.save(company));
+        var saved = companyRepository.save(company);
+        cacheEventPublisher.publish("company", "updated", companyId, null);
+        return companyMapper.toResponse(saved);
     }
 
     private Company findActiveCompany(UUID companyId) {

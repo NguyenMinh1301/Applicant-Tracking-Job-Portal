@@ -24,6 +24,12 @@ spring:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
+      lettuce:
+        pool:
+          max-active: ${REDIS_POOL_MAX_ACTIVE:16}
+          max-idle: ${REDIS_POOL_MAX_IDLE:8}
+          min-idle: ${REDIS_POOL_MIN_IDLE:2}
+          max-wait: ${REDIS_POOL_MAX_WAIT:2000ms}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
   security:
@@ -102,6 +108,9 @@ management:
   endpoint:
     health:
       show-details: always
+      group:
+        readiness:
+          include: readinessState,elasticsearchPopulation
     prometheus:
       enabled: true
   endpoints:
