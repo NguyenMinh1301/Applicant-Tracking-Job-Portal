@@ -8,14 +8,19 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.common.base.BaseController;
 import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.response.ApiResponse;
+import com.vietrecruit.common.response.SearchPageResponse;
+import com.vietrecruit.feature.company.dto.request.CompanySearchRequest;
 import com.vietrecruit.feature.company.dto.request.CompanyUpdateRequest;
 import com.vietrecruit.feature.company.dto.response.CompanyResponse;
+import com.vietrecruit.feature.company.dto.response.CompanySearchResponse;
+import com.vietrecruit.feature.company.service.CompanySearchService;
 import com.vietrecruit.feature.company.service.CompanyService;
 
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
@@ -31,6 +36,22 @@ import lombok.RequiredArgsConstructor;
 public class CompanyController extends BaseController {
 
     private final CompanyService companyService;
+    private final CompanySearchService companySearchService;
+
+    @Operation(
+            summary = "Search Companies",
+            description = "Full-text search across company profiles (public)")
+    @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @GetMapping(ApiConstants.Company.SEARCH)
+    public ResponseEntity<ApiResponse<SearchPageResponse<CompanySearchResponse>>> searchCompanies(
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        var request = CompanySearchRequest.builder().q(q).page(page).size(size).build();
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        ApiSuccessCode.SEARCH_SUCCESS, companySearchService.search(request)));
+    }
 
     @Operation(
             summary = "Get Company",
