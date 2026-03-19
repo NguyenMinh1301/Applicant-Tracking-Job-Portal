@@ -1,5 +1,6 @@
 package com.vietrecruit.feature.job.controller;
 
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
@@ -25,12 +26,16 @@ import com.vietrecruit.common.base.BaseController;
 import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.response.ApiResponse;
 import com.vietrecruit.common.response.PageResponse;
+import com.vietrecruit.common.response.SearchPageResponse;
 import com.vietrecruit.common.security.SecurityUtils;
 import com.vietrecruit.feature.job.dto.request.JobCreateRequest;
+import com.vietrecruit.feature.job.dto.request.JobSearchRequest;
 import com.vietrecruit.feature.job.dto.request.JobUpdateRequest;
 import com.vietrecruit.feature.job.dto.response.JobResponse;
+import com.vietrecruit.feature.job.dto.response.JobSearchResponse;
 import com.vietrecruit.feature.job.dto.response.JobSummaryResponse;
 import com.vietrecruit.feature.job.mapper.JobMapper;
+import com.vietrecruit.feature.job.service.JobSearchService;
 import com.vietrecruit.feature.job.service.JobService;
 
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
@@ -48,6 +53,7 @@ import lombok.RequiredArgsConstructor;
 public class JobController extends BaseController {
 
     private final JobService jobService;
+    private final JobSearchService jobSearchService;
     private final JobMapper jobMapper;
 
     // ── Authenticated (Employer / HR) endpoints ──────────────────────────
@@ -142,6 +148,54 @@ public class JobController extends BaseController {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         ApiSuccessCode.JOB_FETCH_SUCCESS, jobMapper.toJobResponse(job)));
+    }
+
+    // ── Search (unauthenticated) endpoints ──────────────────────────────
+
+    @Operation(
+            summary = "Search Jobs",
+            description =
+                    "Full-text search across published jobs with Vietnamese language support, fuzzy matching, and intelligent ranking")
+    @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @GetMapping(ApiConstants.Job.SEARCH)
+    public ResponseEntity<ApiResponse<SearchPageResponse<JobSearchResponse>>> searchJobs(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) UUID locationId,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) Double salaryMin,
+            @RequestParam(required = false) Double salaryMax,
+            @RequestParam(required = false) String currency,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "relevance") String sort) {
+        var request =
+                JobSearchRequest.builder()
+                        .q(q)
+                        .locationId(locationId)
+                        .categoryId(categoryId)
+                        .salaryMin(salaryMin)
+                        .salaryMax(salaryMax)
+                        .currency(currency)
+                        .page(page)
+                        .size(size)
+                        .sort(sort)
+                        .build();
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        ApiSuccessCode.SEARCH_SUCCESS, jobSearchService.search(request)));
+    }
+
+    @Operation(
+            summary = "Autocomplete Jobs",
+            description = "Returns title suggestions for type-ahead search")
+    @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @GetMapping(ApiConstants.Job.AUTOCOMPLETE)
+    public ResponseEntity<ApiResponse<List<String>>> autocompleteJobs(
+            @RequestParam String q, @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        ApiSuccessCode.AUTOCOMPLETE_SUCCESS,
+                        jobSearchService.autocomplete(q, limit)));
     }
 
     // ── Public (unauthenticated) endpoints ───────────────────────────────

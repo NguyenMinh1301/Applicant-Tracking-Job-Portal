@@ -1,0 +1,326 @@
+package com.vietrecruit.feature.job.service.impl;
+
+import static com.vietrecruit.common.config.elasticsearch.ElasticsearchConstants.INDEX_JOBS;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
+import com.vietrecruit.common.response.SearchPageResponse;
+import com.vietrecruit.feature.job.document.JobDocument;
+import com.vietrecruit.feature.job.dto.request.JobSearchRequest;
+import com.vietrecruit.feature.job.dto.response.JobSearchResponse;
+import com.vietrecruit.feature.job.service.JobSearchService;
+
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.FunctionBoostMode;
+import co.elastic.clients.elasticsearch._types.query_dsl.FunctionScore;
+import co.elastic.clients.elasticsearch._types.query_dsl.FunctionScoreMode;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.CompletionSuggestOption;
+import co.elastic.clients.elasticsearch.core.search.Hit;
+import co.elastic.clients.json.JsonData;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class JobSearchServiceImpl implements JobSearchService {
+
+    private final ElasticsearchClient esClient;
+
+    private static final String RECENCY_SCRIPT =
+            "double ageD = (params.now - doc['created_at'].value.toInstant().toEpochMilli())"
+                    + " / 86400000.0; return 1.0 / (1.0 + ageD * ageD / 196.0);";
+
+    @Override
+    public SearchPageResponse<JobSearchResponse> search(JobSearchRequest request) {
+        try {
+            var query = buildFunctionScoreQuery(request);
+
+            SearchResponse<JobDocument> response =
+                    esClient.search(
+                            s ->
+                                    s.index(INDEX_JOBS)
+                                            .query(query)
+                                            .highlight(
+                                                    h ->
+                                                            h.fields(
+                                                                            "title",
+                                                                            f ->
+                                                                                    f.fragmentSize(
+                                                                                                    150)
+                                                                                            .numberOfFragments(
+                                                                                                    2))
+                                                                    .fields(
+                                                                            "description",
+                                                                            f ->
+                                                                                    f.fragmentSize(
+                                                                                                    150)
+                                                                                            .numberOfFragments(
+                                                                                                    2))
+                                                                    .fields(
+                                                                            "requirements",
+                                                                            f ->
+                                                                                    f.fragmentSize(
+                                                                                                    150)
+                                                                                            .numberOfFragments(
+                                                                                                    2))
+                                                                    .preTags("<mark>")
+                                                                    .postTags("</mark>"))
+                                            .from(request.getPage() * request.getSize())
+                                            .size(request.getSize()),
+                            JobDocument.class);
+
+            return mapToSearchPageResponse(response, request.getPage(), request.getSize());
+        } catch (IOException e) {
+            log.error("Job search failed: {}", e.getMessage(), e);
+            return emptyResponse(request.getPage(), request.getSize());
+        }
+    }
+
+    @Override
+    public List<String> autocomplete(String query, int limit) {
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
+        try {
+            SearchResponse<JobDocument> response =
+                    esClient.search(
+                            s ->
+                                    s.index(INDEX_JOBS)
+                                            .suggest(
+                                                    sg ->
+                                                            sg.suggesters(
+                                                                    "title-suggest",
+                                                                    fs ->
+                                                                            fs.prefix(query)
+                                                                                    .completion(
+                                                                                            cs ->
+                                                                                                    cs.field(
+                                                                                                                    "title.suggest")
+                                                                                                            .size(
+                                                                                                                    limit)
+                                                                                                            .skipDuplicates(
+                                                                                                                    true)
+                                                                                                            .fuzzy(
+                                                                                                                    fz ->
+                                                                                                                            fz
+                                                                                                                                    .fuzziness(
+                                                                                                                                            "AUTO")))))
+                                            .source(sc -> sc.fetch(false))
+                                            .size(0),
+                            JobDocument.class);
+
+            var suggestions = response.suggest().get("title-suggest");
+            if (suggestions == null || suggestions.isEmpty()) {
+                return List.of();
+            }
+
+            return suggestions.stream()
+                    .flatMap(
+                            s ->
+                                    s.completion().options().stream()
+                                            .map(CompletionSuggestOption::text))
+                    .distinct()
+                    .limit(limit)
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            log.error("Job autocomplete failed: {}", e.getMessage(), e);
+            return List.of();
+        }
+    }
+
+    private Query buildFunctionScoreQuery(JobSearchRequest request) {
+        var boolQuery = buildBoolQuery(request);
+
+        List<FunctionScore> functions = new ArrayList<>();
+
+        // Recency decay via script_score (Gaussian approximation, scale=14 days)
+        functions.add(
+                FunctionScore.of(
+                        fn ->
+                                fn.scriptScore(
+                                        ss ->
+                                                ss.script(
+                                                        sc ->
+                                                                sc.source(RECENCY_SCRIPT)
+                                                                        .params(
+                                                                                Map.of(
+                                                                                        "now",
+                                                                                        JsonData.of(
+                                                                                                System
+                                                                                                        .currentTimeMillis())))))));
+
+        return Query.of(
+                q ->
+                        q.functionScore(
+                                fs ->
+                                        fs.query(innerQ -> innerQ.bool(boolQuery))
+                                                .functions(functions)
+                                                .scoreMode(FunctionScoreMode.Sum)
+                                                .boostMode(FunctionBoostMode.Multiply)));
+    }
+
+    private BoolQuery buildBoolQuery(JobSearchRequest request) {
+        return BoolQuery.of(
+                b -> {
+                    String q = request.getQ();
+                    if (q != null && !q.isBlank()) {
+                        b.must(
+                                m ->
+                                        m.multiMatch(
+                                                mm ->
+                                                        mm.query(q)
+                                                                .fields(
+                                                                        "title^3",
+                                                                        "description",
+                                                                        "requirements^1.5",
+                                                                        "company_name",
+                                                                        "category_name^2")
+                                                                .type(TextQueryType.BestFields)
+                                                                .fuzziness("AUTO")
+                                                                .prefixLength(2)));
+                        b.should(sh -> sh.term(t -> t.field("title.keyword").value(q).boost(5.0f)));
+                    } else {
+                        b.must(m -> m.matchAll(ma -> ma));
+                    }
+
+                    // Hard filter: only PUBLISHED jobs
+                    b.filter(f -> f.term(t -> t.field("status").value(FieldValue.of("PUBLISHED"))));
+
+                    if (request.getLocationId() != null) {
+                        b.filter(
+                                f ->
+                                        f.term(
+                                                t ->
+                                                        t.field("location_id")
+                                                                .value(
+                                                                        request.getLocationId()
+                                                                                .toString())));
+                    }
+
+                    if (request.getCategoryId() != null) {
+                        b.filter(
+                                f ->
+                                        f.term(
+                                                t ->
+                                                        t.field("category_id")
+                                                                .value(
+                                                                        request.getCategoryId()
+                                                                                .toString())));
+                    }
+
+                    if (request.getSalaryMin() != null) {
+                        b.filter(
+                                f ->
+                                        f.range(
+                                                r ->
+                                                        r.number(
+                                                                n ->
+                                                                        n.field("max_salary")
+                                                                                .gte(
+                                                                                        request
+                                                                                                .getSalaryMin()))));
+                    }
+
+                    if (request.getSalaryMax() != null) {
+                        b.filter(
+                                f ->
+                                        f.range(
+                                                r ->
+                                                        r.number(
+                                                                n ->
+                                                                        n.field("min_salary")
+                                                                                .lte(
+                                                                                        request
+                                                                                                .getSalaryMax()))));
+                    }
+
+                    return b;
+                });
+    }
+
+    private SearchPageResponse<JobSearchResponse> mapToSearchPageResponse(
+            SearchResponse<JobDocument> response, int page, int size) {
+        long total = response.hits().total() != null ? response.hits().total().value() : 0;
+        int totalPages = (int) Math.ceil((double) total / size);
+
+        List<JobSearchResponse> content =
+                response.hits().hits().stream().map(this::mapHitToResponse).toList();
+
+        return SearchPageResponse.<JobSearchResponse>builder()
+                .content(content)
+                .page(page)
+                .size(size)
+                .totalElements(total)
+                .totalPages(totalPages)
+                .first(page == 0)
+                .last(page >= totalPages - 1)
+                .empty(content.isEmpty())
+                .tookMs(response.took())
+                .build();
+    }
+
+    private JobSearchResponse mapHitToResponse(Hit<JobDocument> hit) {
+        JobDocument doc = hit.source();
+        if (doc == null) {
+            return JobSearchResponse.builder().build();
+        }
+
+        Map<String, List<String>> highlights = new HashMap<>();
+        if (hit.highlight() != null && !hit.highlight().isEmpty()) {
+            highlights.putAll(hit.highlight());
+        }
+
+        return JobSearchResponse.builder()
+                .id(doc.getId())
+                .title(doc.getTitle())
+                .description(truncate(doc.getDescription(), 300))
+                .requirements(truncate(doc.getRequirements(), 300))
+                .companyName(doc.getCompanyName())
+                .categoryName(doc.getCategoryName())
+                .locationName(doc.getLocationName())
+                .minSalary(doc.getMinSalary())
+                .maxSalary(doc.getMaxSalary())
+                .currency(doc.getCurrency())
+                .isNegotiable(doc.getIsNegotiable())
+                .status(doc.getStatus())
+                .publicLink(doc.getPublicLink())
+                .createdAt(doc.getCreatedAt())
+                .highlights(highlights.isEmpty() ? null : highlights)
+                .score(hit.score())
+                .build();
+    }
+
+    private SearchPageResponse<JobSearchResponse> emptyResponse(int page, int size) {
+        return SearchPageResponse.<JobSearchResponse>builder()
+                .content(List.of())
+                .page(page)
+                .size(size)
+                .totalElements(0)
+                .totalPages(0)
+                .first(true)
+                .last(true)
+                .empty(true)
+                .tookMs(0)
+                .build();
+    }
+
+    private String truncate(String text, int maxLength) {
+        if (text == null || text.length() <= maxLength) {
+            return text;
+        }
+        return text.substring(0, maxLength) + "...";
+    }
+}
