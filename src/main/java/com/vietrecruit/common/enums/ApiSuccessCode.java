@@ -49,6 +49,10 @@ public enum ApiSuccessCode {
     TRANSACTION_HISTORY_FETCH_SUCCESS("TRANSACTION_HISTORY_FETCH_SUCCESS",
             "Transaction history retrieved successfully"),
 
+    // Search
+    SEARCH_SUCCESS("SEARCH_SUCCESS", "Search completed successfully"),
+    AUTOCOMPLETE_SUCCESS("AUTOCOMPLETE_SUCCESS", "Autocomplete results retrieved successfully"),
+
     // Job
     JOB_CREATE_SUCCESS("JOB_CREATE_SUCCESS", "Job created successfully"),
     JOB_UPDATE_SUCCESS("JOB_UPDATE_SUCCESS", "Job updated successfully"),

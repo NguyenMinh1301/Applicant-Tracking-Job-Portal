@@ -102,6 +102,8 @@ public final class ApiConstants {
         public static final String SALARY_BENCHMARK = "/{id}/salary-benchmark";
         public static final String PUBLIC_ROOT = "/public";
         public static final String PUBLIC_GET = "/public/{id}";
+        public static final String SEARCH = "/search";
+        public static final String AUTOCOMPLETE = "/autocomplete";
         public static final String AI_GENERATE_DESCRIPTION = "/ai/generate-description";
         public static final String AI_APPLY_DESCRIPTION = "/{id}/ai/apply-description";
     }
@@ -111,6 +113,7 @@ public final class ApiConstants {
 
         public static final String ROOT = API_VERSION + "/companies";
         public static final String ME = "/me";
+        public static final String SEARCH = "/search";
     }
 
     public static final class Department {
@@ -150,6 +153,7 @@ public final class ApiConstants {
         public static final String ME_CV_IMPROVEMENT = "/me/cv/improvement";
         public static final String ME_SALARY_BENCHMARK = "/me/salary-benchmark";
         public static final String GET = "/{id}";
+        public static final String SEARCH = "/search";
     }
 
     public static final class Application {
