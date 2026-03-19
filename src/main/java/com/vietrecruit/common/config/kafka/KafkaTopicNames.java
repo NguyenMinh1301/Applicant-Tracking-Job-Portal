@@ -9,6 +9,9 @@ public final class KafkaTopicNames {
     // ========== Debezium CDC Topics ==========
 
     public static final String CDC_USER = "vietrecruit.public.users";
+    public static final String CDC_JOB = "vietrecruit.public.jobs";
+    public static final String CDC_CANDIDATE = "vietrecruit.public.candidates";
+    public static final String CDC_COMPANY = "vietrecruit.public.companies";
 
     // ========== Application Topics ==========
 
