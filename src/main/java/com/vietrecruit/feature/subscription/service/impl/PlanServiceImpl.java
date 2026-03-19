@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.vietrecruit.common.config.cache.CacheNames;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.subscription.dto.response.PlanResponse;
@@ -24,11 +25,13 @@ public class PlanServiceImpl implements PlanService {
     private final SubscriptionMapper mapper;
 
     @Override
+    @org.springframework.cache.annotation.Cacheable(value = CacheNames.PLAN_LIST, key = "'all'")
     public List<PlanResponse> listActivePlans() {
         return planRepository.findAllByIsActiveTrue().stream().map(mapper::toPlanResponse).toList();
     }
 
     @Override
+    @org.springframework.cache.annotation.Cacheable(value = CacheNames.PLAN_DETAIL, key = "#planId")
     public PlanResponse getPlan(UUID planId) {
         var plan =
                 planRepository
