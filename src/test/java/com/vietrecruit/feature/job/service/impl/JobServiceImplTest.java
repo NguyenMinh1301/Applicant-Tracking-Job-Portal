@@ -14,7 +14,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.kafka.core.KafkaTemplate;
 
+import com.vietrecruit.common.config.cache.CacheEventPublisher;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.job.dto.request.JobCreateRequest;
@@ -30,6 +32,8 @@ class JobServiceImplTest {
     @Mock private JobRepository jobRepository;
     @Mock private JobMapper jobMapper;
     @Mock private QuotaGuard quotaGuard;
+    @Mock private KafkaTemplate<String, Object> kafkaTemplate;
+    @Mock private CacheEventPublisher cacheEventPublisher;
     @InjectMocks private JobServiceImpl jobService;
 
     private UUID companyId;

@@ -1,7 +1,6 @@
 package com.vietrecruit.feature.job.document;
 
 import java.time.Instant;
-import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -55,6 +54,21 @@ public class JobDocument {
     @JsonProperty("is_negotiable")
     private Boolean isNegotiable;
 
+    @JsonProperty("view_count")
+    private Integer viewCount;
+
+    @JsonProperty("application_count")
+    private Integer applicationCount;
+
+    @JsonProperty("is_hot")
+    private Boolean isHot;
+
+    @JsonProperty("is_featured")
+    private Boolean isFeatured;
+
+    @JsonProperty("published_at")
+    private Instant publishedAt;
+
     private String deadline;
 
     @JsonProperty("public_link")
@@ -65,47 +79,4 @@ public class JobDocument {
 
     @JsonProperty("updated_at")
     private Instant updatedAt;
-
-    public static JobDocument fromCdcFields(
-            UUID id,
-            String title,
-            String description,
-            String requirements,
-            String status,
-            UUID companyId,
-            String companyName,
-            UUID categoryId,
-            String categoryName,
-            UUID locationId,
-            String locationName,
-            Double minSalary,
-            Double maxSalary,
-            String currency,
-            Boolean isNegotiable,
-            String deadline,
-            String publicLink,
-            Instant createdAt,
-            Instant updatedAt) {
-        return JobDocument.builder()
-                .id(id != null ? id.toString() : null)
-                .title(title)
-                .description(description)
-                .requirements(requirements)
-                .status(status)
-                .companyId(companyId != null ? companyId.toString() : null)
-                .companyName(companyName)
-                .categoryId(categoryId != null ? categoryId.toString() : null)
-                .categoryName(categoryName)
-                .locationId(locationId != null ? locationId.toString() : null)
-                .locationName(locationName)
-                .minSalary(minSalary)
-                .maxSalary(maxSalary)
-                .currency(currency)
-                .isNegotiable(isNegotiable)
-                .deadline(deadline)
-                .publicLink(publicLink)
-                .createdAt(createdAt)
-                .updatedAt(updatedAt)
-                .build();
-    }
 }

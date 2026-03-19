@@ -87,6 +87,7 @@ public class JobServiceImpl implements JobService {
             try {
                 quotaGuard.validateCanPublishJob(companyId);
                 job.setStatus(JobStatus.PUBLISHED);
+                job.setPublishedAt(java.time.Instant.now());
                 var saved = jobRepository.save(job);
                 quotaGuard.incrementActiveJobs(companyId);
                 log.info("Published job id={} company={}", jobId, companyId);

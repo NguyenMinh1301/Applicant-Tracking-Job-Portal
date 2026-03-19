@@ -20,6 +20,7 @@ import com.vietrecruit.feature.job.service.JobSearchService;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.FieldValueFactorModifier;
 import co.elastic.clients.elasticsearch._types.query_dsl.FunctionBoostMode;
 import co.elastic.clients.elasticsearch._types.query_dsl.FunctionScore;
 import co.elastic.clients.elasticsearch._types.query_dsl.FunctionScoreMode;
@@ -39,8 +40,9 @@ public class JobSearchServiceImpl implements JobSearchService {
 
     private final ElasticsearchClient esClient;
 
-    private static final String RECENCY_SCRIPT =
-            "double ageD = (params.now - doc['created_at'].value.toInstant().toEpochMilli())"
+    private static final String PUBLISHED_AT_DECAY_SCRIPT =
+            "if (!doc.containsKey('published_at') || doc['published_at'].empty) { return 0.5; }"
+                    + " double ageD = (params.now - doc['published_at'].value.toInstant().toEpochMilli())"
                     + " / 86400000.0; return 1.0 / (1.0 + ageD * ageD / 196.0);";
 
     @Override
@@ -146,7 +148,29 @@ public class JobSearchServiceImpl implements JobSearchService {
 
         List<FunctionScore> functions = new ArrayList<>();
 
-        // Recency decay via script_score (Gaussian approximation, scale=14 days)
+        // 1. field_value_factor: view_count, modifier log1p, factor 0.3
+        functions.add(
+                FunctionScore.of(
+                        fn ->
+                                fn.fieldValueFactor(
+                                        fvf ->
+                                                fvf.field("view_count")
+                                                        .modifier(FieldValueFactorModifier.Log1p)
+                                                        .factor(0.3)
+                                                        .missing(0.0))));
+
+        // 2. field_value_factor: application_count, modifier log1p, factor 0.2
+        functions.add(
+                FunctionScore.of(
+                        fn ->
+                                fn.fieldValueFactor(
+                                        fvf ->
+                                                fvf.field("application_count")
+                                                        .modifier(FieldValueFactorModifier.Log1p)
+                                                        .factor(0.2)
+                                                        .missing(0.0))));
+
+        // 3. gauss decay: published_at, scale 14d, decay 0.5 (Cauchy approximation via script)
         functions.add(
                 FunctionScore.of(
                         fn ->
@@ -154,13 +178,27 @@ public class JobSearchServiceImpl implements JobSearchService {
                                         ss ->
                                                 ss.script(
                                                         sc ->
-                                                                sc.source(RECENCY_SCRIPT)
+                                                                sc.source(PUBLISHED_AT_DECAY_SCRIPT)
                                                                         .params(
                                                                                 Map.of(
                                                                                         "now",
                                                                                         JsonData.of(
                                                                                                 System
                                                                                                         .currentTimeMillis())))))));
+
+        // 4. filter boost: is_hot = true, weight 2.0
+        functions.add(
+                FunctionScore.of(
+                        fn ->
+                                fn.filter(f -> f.term(t -> t.field("is_hot").value(true)))
+                                        .weight(2.0)));
+
+        // 5. filter boost: is_featured = true, weight 1.5
+        functions.add(
+                FunctionScore.of(
+                        fn ->
+                                fn.filter(f -> f.term(t -> t.field("is_featured").value(true)))
+                                        .weight(1.5)));
 
         return Query.of(
                 q ->
