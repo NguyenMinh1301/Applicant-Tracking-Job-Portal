@@ -13,7 +13,7 @@
         </encoder>
     </appender>
 
-    <!-- Disable logstash appending for tests to avoid connection timeouts or JVM hanging -->
+    <!-- Loki and File appenders disabled for tests — console only -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
     </root>

@@ -6,9 +6,6 @@ spring:
     active: dev
   config:
     import: optional:file:.env[.properties]
-  logging:
-    logstash:
-      host: 127.0.0.1
   threads:
     virtual:
       enabled: true
