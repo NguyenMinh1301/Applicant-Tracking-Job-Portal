@@ -105,6 +105,8 @@ management:
   health:
     circuitbreakers:
       enabled: true
+    probes:
+      enabled: true
   endpoint:
     health:
       show-details: always

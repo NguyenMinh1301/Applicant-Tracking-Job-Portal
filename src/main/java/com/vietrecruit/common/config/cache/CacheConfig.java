@@ -25,15 +25,18 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 @EnableCaching
 public class CacheConfig {
 
-    @Bean
-    public ObjectMapper cacheObjectMapper() {
+    private ObjectMapper cacheObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        // OBJECT_AND_NON_CONCRETE skips java.* and javax.* packages, preventing internal JDK
+        // collection implementations (e.g. ImmutableCollections$ListN from List.of()) from being
+        // written as type descriptors. NON_FINAL would include those and cause deserialization
+        // failures when the concrete class is non-public.
         mapper.activateDefaultTyping(
                 BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class).build(),
-                ObjectMapper.DefaultTyping.NON_FINAL,
+                ObjectMapper.DefaultTyping.OBJECT_AND_NON_CONCRETE,
                 JsonTypeInfo.As.PROPERTY);
         return mapper;
     }

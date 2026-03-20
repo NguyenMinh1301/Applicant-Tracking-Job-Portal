@@ -3,9 +3,11 @@ package com.vietrecruit.feature.company.service.impl;
 import static com.vietrecruit.common.config.elasticsearch.ElasticsearchConstants.INDEX_COMPANIES;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -102,7 +104,9 @@ public class CompanySearchServiceImpl implements CompanySearchService {
         int totalPages = (int) Math.ceil((double) total / size);
 
         List<CompanySearchResponse> content =
-                response.hits().hits().stream().map(this::mapHitToResponse).toList();
+                response.hits().hits().stream()
+                        .map(this::mapHitToResponse)
+                        .collect(Collectors.toList());
 
         return SearchPageResponse.<CompanySearchResponse>builder()
                 .content(content)
@@ -141,7 +145,7 @@ public class CompanySearchServiceImpl implements CompanySearchService {
 
     private SearchPageResponse<CompanySearchResponse> emptyResponse(int page, int size) {
         return SearchPageResponse.<CompanySearchResponse>builder()
-                .content(List.of())
+                .content(new ArrayList<>())
                 .page(page)
                 .size(size)
                 .totalElements(0)
