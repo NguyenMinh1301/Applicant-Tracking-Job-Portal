@@ -308,12 +308,12 @@ services:
 
   elasticsearch:
     build:
-      context: ./elk
+      context: ./elastic
       dockerfile: elasticsearch.Dockerfile
     image: vr-elasticsearch:8.17.0
     container_name: vr-elasticsearch
     volumes:
-      - ./elk/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./elastic/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     ports:
       - "9200:9200"
       - "9300:9300"
@@ -351,7 +351,7 @@ services:
     image: docker.elastic.co/kibana/kibana:8.17.0
     container_name: vr-kibana
     volumes:
-      - ./elk/kibana.yml:/usr/share/kibana/config/kibana.yml
+      - ./elastic/kibana.yml:/usr/share/kibana/config/kibana.yml
     ports:
       - "5601:5601"
     networks:
