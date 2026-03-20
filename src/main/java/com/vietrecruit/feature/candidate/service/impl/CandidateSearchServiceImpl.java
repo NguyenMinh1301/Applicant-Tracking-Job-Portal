@@ -3,9 +3,11 @@ package com.vietrecruit.feature.candidate.service.impl;
 import static com.vietrecruit.common.config.elasticsearch.ElasticsearchConstants.INDEX_CANDIDATES;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -207,7 +209,9 @@ public class CandidateSearchServiceImpl implements CandidateSearchService {
         int totalPages = (int) Math.ceil((double) total / size);
 
         List<CandidateSearchResponse> content =
-                response.hits().hits().stream().map(this::mapHitToResponse).toList();
+                response.hits().hits().stream()
+                        .map(this::mapHitToResponse)
+                        .collect(Collectors.toList());
 
         return SearchPageResponse.<CandidateSearchResponse>builder()
                 .content(content)
@@ -255,7 +259,7 @@ public class CandidateSearchServiceImpl implements CandidateSearchService {
 
     private SearchPageResponse<CandidateSearchResponse> emptyResponse(int page, int size) {
         return SearchPageResponse.<CandidateSearchResponse>builder()
-                .content(List.of())
+                .content(new ArrayList<>())
                 .page(page)
                 .size(size)
                 .totalElements(0)

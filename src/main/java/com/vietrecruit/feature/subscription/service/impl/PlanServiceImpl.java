@@ -2,6 +2,7 @@ package com.vietrecruit.feature.subscription.service.impl;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +28,11 @@ public class PlanServiceImpl implements PlanService {
     @Override
     @org.springframework.cache.annotation.Cacheable(value = CacheNames.PLAN_LIST, key = "'all'")
     public List<PlanResponse> listActivePlans() {
-        return planRepository.findAllByIsActiveTrue().stream().map(mapper::toPlanResponse).toList();
+        // collect(toList()) returns a mutable ArrayList, avoiding ImmutableCollections$ListN
+        // which cannot be deserialized by Jackson when pulled from Redis cache.
+        return planRepository.findAllByIsActiveTrue().stream()
+                .map(mapper::toPlanResponse)
+                .collect(Collectors.toList());
     }
 
     @Override

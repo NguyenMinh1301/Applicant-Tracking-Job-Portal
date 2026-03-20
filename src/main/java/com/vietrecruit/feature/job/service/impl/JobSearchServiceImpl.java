@@ -295,7 +295,9 @@ public class JobSearchServiceImpl implements JobSearchService {
         int totalPages = (int) Math.ceil((double) total / size);
 
         List<JobSearchResponse> content =
-                response.hits().hits().stream().map(this::mapHitToResponse).toList();
+                response.hits().hits().stream()
+                        .map(this::mapHitToResponse)
+                        .collect(Collectors.toList());
 
         return SearchPageResponse.<JobSearchResponse>builder()
                 .content(content)
@@ -343,7 +345,7 @@ public class JobSearchServiceImpl implements JobSearchService {
 
     private SearchPageResponse<JobSearchResponse> emptyResponse(int page, int size) {
         return SearchPageResponse.<JobSearchResponse>builder()
-                .content(List.of())
+                .content(new ArrayList<>())
                 .page(page)
                 .size(size)
                 .totalElements(0)
