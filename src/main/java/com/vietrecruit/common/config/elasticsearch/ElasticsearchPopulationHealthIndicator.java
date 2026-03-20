@@ -13,11 +13,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Health indicator that reports OUT_OF_SERVICE when any of the 3 ES indices has 0 documents. This
- * prevents load balancers from routing traffic before Elasticsearch is fully populated during
- * cold-start.
+ * Health indicator that reports OUT_OF_SERVICE when:
  *
- * <p>Add to the readiness group in application.yaml:
+ * <ul>
+ *   <li>Bootstrap is in progress for any index (via {@link ElasticsearchBootstrapState}), or
+ *   <li>Any of the 3 ES indices has 0 documents after bootstrap completes.
+ * </ul>
+ *
+ * This prevents load balancers from routing traffic before Elasticsearch is fully populated.
+ *
+ * <p>Configured in application.yaml:
  *
  * <pre>
  * management.endpoint.health.group.readiness.include: readinessState,elasticsearchPopulation
@@ -29,9 +34,16 @@ import lombok.extern.slf4j.Slf4j;
 public class ElasticsearchPopulationHealthIndicator implements HealthIndicator {
 
     private final ElasticsearchClient esClient;
+    private final ElasticsearchBootstrapState bootstrapState;
 
     @Override
     public Health health() {
+        if (bootstrapState.isInProgress()) {
+            return Health.outOfService()
+                    .withDetail("reason", "Elasticsearch bootstrap is in progress")
+                    .build();
+        }
+
         try {
             long jobsCount = getDocCount(INDEX_JOBS);
             long candidatesCount = getDocCount(INDEX_CANDIDATES);
