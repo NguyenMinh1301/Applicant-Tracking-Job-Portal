@@ -32,6 +32,7 @@ services:
       - GF_LOG_MODE=console file
     volumes:
       - ../../grafana-storage:/var/lib/grafana
+      - ../../grafana/provisioning:/etc/grafana/provisioning
     ports:
       - "3000:3000"
     networks:
