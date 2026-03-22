@@ -25,6 +25,7 @@ import com.vietrecruit.common.storage.StorageService;
 import com.vietrecruit.feature.ai.shared.event.CvUploadedEvent;
 import com.vietrecruit.feature.application.repository.ApplicationRepository;
 import com.vietrecruit.feature.candidate.dto.request.CandidateUpdateRequest;
+import com.vietrecruit.feature.user.repository.UserRepository;
 import com.vietrecruit.feature.candidate.dto.response.CandidateProfileResponse;
 import com.vietrecruit.feature.candidate.dto.response.CandidateSearchResult;
 import com.vietrecruit.feature.candidate.dto.response.CvUploadResponse;
@@ -58,6 +59,7 @@ public class CandidateServiceImpl implements CandidateService {
     private final StorageService storageService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ApplicationRepository applicationRepository;
+    private final UserRepository userRepository;
 
     @Override
     public CandidateProfileResponse getProfile(UUID userId) {
@@ -124,9 +126,18 @@ public class CandidateServiceImpl implements CandidateService {
         candidateRepository.save(candidate);
 
         try {
+            String candidateEmail =
+                    userRepository
+                            .findById(candidate.getUserId())
+                            .map(u -> u.getEmail())
+                            .orElse(null);
+            if (candidateEmail == null) {
+                log.error(
+                        "AI ingestion: cannot resolve email for candidateId={}",
+                        candidate.getId());
+            }
             CvUploadedEvent event =
-                    new CvUploadedEvent(
-                            candidate.getId(), objectKey, candidate.getCvOriginalFilename());
+                    new CvUploadedEvent(candidate.getId(), objectKey, candidateEmail);
             kafkaTemplate
                     .send("ai.cv-uploaded", candidate.getId().toString(), event)
                     .whenComplete(

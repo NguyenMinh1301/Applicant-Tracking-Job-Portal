@@ -8,6 +8,8 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 
@@ -62,23 +64,27 @@ public class CvUploadedIngestionConsumer {
         Map<String, Object> metadata =
                 Map.of(
                         "type", "cv",
-                        "candidateId", event.candidateId().toString(),
-                        "email", event.candidateEmail());
+                        "candidateId", event.candidateId().toString());
 
-        embeddingService.embedAndStore("cv-" + event.candidateId(), cvText, metadata);
+        embeddingService.embedAndStore(event.candidateId().toString(), cvText, metadata);
 
         log.info("AI ingestion: CV embedded successfully: candidateId={}", event.candidateId());
     }
 
     @DltHandler
-    public void handleDlt(ConsumerRecord<String, CvUploadedEvent> record, Exception ex) {
+    public void handleDlt(
+            ConsumerRecord<String, CvUploadedEvent> record,
+            @Header(KafkaHeaders.DLT_EXCEPTION_FQCN) byte[] exceptionFqcn,
+            @Header(KafkaHeaders.DLT_EXCEPTION_MESSAGE) byte[] exceptionMessage,
+            @Header(KafkaHeaders.DLT_ORIGINAL_TOPIC) byte[] originalTopic) {
+        String candidateId =
+                record.value() != null ? record.value().candidateId().toString() : "unknown";
         log.error(
-                "AI ingestion DLT: CV event exhausted retries: candidateId={}, topic={},"
-                        + " partition={}, offset={}, error={}",
-                record.value() != null ? record.value().candidateId() : "null",
-                record.topic(),
-                record.partition(),
-                record.offset(),
-                ex.getMessage());
+                "CV ingestion permanently failed. candidateId={}, originalTopic={}, exception={},"
+                        + " message={}",
+                candidateId,
+                new String(originalTopic),
+                new String(exceptionFqcn),
+                new String(exceptionMessage));
     }
 }

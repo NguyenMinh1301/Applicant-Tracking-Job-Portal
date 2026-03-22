@@ -9,6 +9,8 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 
@@ -75,20 +77,24 @@ public class JobPublishedIngestionConsumer {
                     .ifPresent(loc -> metadata.put("locationName", loc.getName()));
         }
 
-        embeddingService.embedAndStore("job-" + event.jobId(), textBuilder.toString(), metadata);
+        embeddingService.embedAndStore(event.jobId().toString(), textBuilder.toString(), metadata);
 
         log.info("AI ingestion: Job embedded successfully: jobId={}", event.jobId());
     }
 
     @DltHandler
-    public void handleDlt(ConsumerRecord<String, JobPublishedEvent> record, Exception ex) {
+    public void handleDlt(
+            ConsumerRecord<String, JobPublishedEvent> record,
+            @Header(KafkaHeaders.DLT_EXCEPTION_FQCN) byte[] exceptionFqcn,
+            @Header(KafkaHeaders.DLT_EXCEPTION_MESSAGE) byte[] exceptionMessage,
+            @Header(KafkaHeaders.DLT_ORIGINAL_TOPIC) byte[] originalTopic) {
+        String jobId = record.value() != null ? record.value().jobId().toString() : "unknown";
         log.error(
-                "Job embedding DLT exhausted retries. topic={} partition={} offset={} jobId={}"
-                        + " error={}",
-                record.topic(),
-                record.partition(),
-                record.offset(),
-                record.value() != null ? record.value().jobId() : "null",
-                ex.getMessage());
+                "Job ingestion permanently failed. jobId={}, originalTopic={}, exception={},"
+                        + " message={}",
+                jobId,
+                new String(originalTopic),
+                new String(exceptionFqcn),
+                new String(exceptionMessage));
     }
 }
