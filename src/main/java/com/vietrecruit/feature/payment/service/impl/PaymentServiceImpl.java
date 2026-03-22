@@ -227,7 +227,7 @@ public class PaymentServiceImpl implements PaymentService {
         } catch (WebhookVerificationException e) {
             webhookSignatureFailureCounter.increment();
             log.warn("Webhook signature verification failed: {}", e.getMessage());
-            return;
+            throw new ApiException(ApiErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE);
         }
 
         // Signature valid — deserialize data into SDK model for business logic
