@@ -83,7 +83,6 @@ public class AdminAccountInitializer implements ApplicationRunner {
         log.warn("==========================================================");
         log.warn("  DEFAULT ADMIN ACCOUNT CREATED");
         log.warn("  Email:    {}", adminEmail);
-        log.warn("  Password: {}", adminPassword);
         log.warn("==========================================================");
     }
 }

@@ -175,6 +175,10 @@ public enum ApiErrorCode {
     DEPARTMENT_NOT_FOUND("DEPARTMENT_NOT_FOUND", "Department not found or does not belong to your company.",
             HttpStatus.NOT_FOUND),
 
+    // Concurrency
+    CONCURRENT_MODIFICATION("CONCURRENT_MODIFICATION", "Resource was modified by another request. Please retry.",
+            HttpStatus.CONFLICT),
+
     // Generic
     CONFLICT("CONFLICT", "Resource already exists", HttpStatus.CONFLICT);
 

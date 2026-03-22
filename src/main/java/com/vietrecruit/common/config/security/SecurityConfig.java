@@ -60,8 +60,6 @@ public class SecurityConfig {
         "/vietrecruit/jobs/search",
         "/vietrecruit/jobs/autocomplete",
         "/vietrecruit/companies/search",
-        "/actuator/**",
-        "/actuator/prometheus",
         "/health/**"
     };
 
@@ -85,6 +83,8 @@ public class SecurityConfig {
                                         .authenticated()
                                         .requestMatchers(adminEndpoints)
                                         .hasAnyAuthority("SYSTEM_ADMIN", "COMPANY_ADMIN")
+                                        .requestMatchers("/actuator/**")
+                                        .hasAuthority("SYSTEM_ADMIN")
                                         .anyRequest()
                                         .authenticated())
                 .oauth2Login(
