@@ -75,7 +75,11 @@ public class ScorecardServiceImpl implements ScorecardService {
                         .updatedAt(Instant.now())
                         .build();
 
-        scorecard = scorecardRepository.save(scorecard);
+        try {
+            scorecard = scorecardRepository.save(scorecard);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new ApiException(ApiErrorCode.SCORECARD_DUPLICATE);
+        }
 
         // Refresh to get generated average_score
         scorecard = scorecardRepository.findById(scorecard.getId()).orElse(scorecard);

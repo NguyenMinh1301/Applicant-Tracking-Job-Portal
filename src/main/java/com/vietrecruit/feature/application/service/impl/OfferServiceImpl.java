@@ -227,13 +227,21 @@ public class OfferServiceImpl implements OfferService {
 
         offer.setStatus(isAccept ? OfferStatus.ACCEPTED : OfferStatus.DECLINED);
         offer.setUpdatedBy(userId);
-        offer = offerRepository.save(offer);
+        try {
+            offer = offerRepository.save(offer);
+        } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
+            throw new ApiException(ApiErrorCode.CONCURRENT_MODIFICATION);
+        }
 
         // Atomically update application status
         var oldStatus = application.getStatus();
         var newStatus = isAccept ? ApplicationStatus.HIRED : ApplicationStatus.REJECTED;
         application.setStatus(newStatus);
-        applicationRepository.save(application);
+        try {
+            applicationRepository.save(application);
+        } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
+            throw new ApiException(ApiErrorCode.CONCURRENT_MODIFICATION);
+        }
 
         applicationService.insertHistory(
                 application.getId(),

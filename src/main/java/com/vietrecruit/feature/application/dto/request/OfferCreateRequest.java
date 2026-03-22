@@ -29,8 +29,12 @@ public class OfferCreateRequest {
 
     private LocalDate startDate;
 
+    @Size(max = 5000, message = "Note must not exceed 5000 characters")
     private String note;
 
-    @Size(max = 255, message = "Offer letter URL must not exceed 255 characters")
+    @Size(max = 2048, message = "Offer letter URL must not exceed 2048 characters")
+    @jakarta.validation.constraints.Pattern(
+            regexp = "^https://.*",
+            message = "Offer letter URL must start with https://")
     private String offerLetterUrl;
 }

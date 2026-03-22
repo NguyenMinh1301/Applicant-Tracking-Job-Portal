@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import com.vietrecruit.feature.application.enums.ScorecardResult;
 
@@ -35,5 +36,6 @@ public class ScorecardCreateRequest {
     @NotNull(message = "Result is required")
     private ScorecardResult result;
 
+    @Size(max = 5000, message = "Comments must not exceed 5000 characters")
     private String comments;
 }

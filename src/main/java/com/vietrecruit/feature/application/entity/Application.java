@@ -11,6 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -66,6 +67,8 @@ public class Application {
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    @Version private Long version;
 
     @Column(name = "ai_score")
     private Integer aiScore;

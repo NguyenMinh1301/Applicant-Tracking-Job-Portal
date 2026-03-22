@@ -184,7 +184,11 @@ public class ApplicationServiceImpl implements ApplicationService {
         }
 
         application.setStatus(targetStatus);
-        application = applicationRepository.save(application);
+        try {
+            application = applicationRepository.save(application);
+        } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
+            throw new ApiException(ApiErrorCode.CONCURRENT_MODIFICATION);
+        }
 
         insertHistory(applicationId, currentStatus, targetStatus, userId, request.getNotes());
 
