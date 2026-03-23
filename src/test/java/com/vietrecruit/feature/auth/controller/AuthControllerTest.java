@@ -81,7 +81,7 @@ class AuthControllerTest {
     void register_Success() throws Exception {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("new@example.com");
-        request.setPassword("password123");
+        request.setPassword("Password123!");
         request.setFullName("New User");
 
         when(authService.register(any(RegisterRequest.class)))

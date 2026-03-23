@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.vietrecruit.common.config.PayOSConfig;
+import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.payment.entity.PaymentTransaction;
 import com.vietrecruit.feature.payment.enums.PaymentStatus;
 import com.vietrecruit.feature.payment.exception.WebhookVerificationException;
@@ -100,7 +101,7 @@ class PaymentServiceImplWebhookTest {
                 .when(webhookSignatureVerifier)
                 .verify(any(), eq("bad-sig"));
 
-        paymentService.handleWebhook(payload);
+        assertThrows(ApiException.class, () -> paymentService.handleWebhook(payload));
 
         verify(paymentTransactionRepository, never()).findByOrderCode(anyLong());
         verify(paymentTransactionRepository, never()).save(any());

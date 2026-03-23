@@ -77,7 +77,7 @@ public class JobPublishedIngestionConsumer {
                     .ifPresent(loc -> metadata.put("locationName", loc.getName()));
         }
 
-        embeddingService.embedAndStore(event.jobId().toString(), textBuilder.toString(), metadata);
+        embeddingService.embedAndStore("job-" + event.jobId(), textBuilder.toString(), metadata);
 
         log.info("AI ingestion: Job embedded successfully: jobId={}", event.jobId());
     }

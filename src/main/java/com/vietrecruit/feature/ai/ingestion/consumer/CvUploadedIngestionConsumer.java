@@ -76,7 +76,7 @@ public class CvUploadedIngestionConsumer {
         Map<String, Object> metadata =
                 Map.of("type", "cv", "candidateId", event.candidateId().toString());
 
-        embeddingService.embedAndStore(event.candidateId().toString(), cvText, metadata);
+        embeddingService.embedAndStore("cv-" + event.candidateId(), cvText, metadata);
 
         log.info("AI ingestion: CV embedded successfully: candidateId={}", event.candidateId());
     }

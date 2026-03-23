@@ -22,6 +22,7 @@ import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisKeyCommands;
 import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 
@@ -48,11 +49,24 @@ class CacheInvalidationConsumerTest {
     @InjectMocks private CacheInvalidationConsumer consumer;
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     void setUpRedisChain() {
-        // Wire the connection factory chain for SCAN tests
-        lenient().when(cacheRedisTemplate.getConnectionFactory()).thenReturn(connectionFactory);
-        lenient().when(connectionFactory.getConnection()).thenReturn(connection);
         lenient().when(connection.keyCommands()).thenReturn(keyCommands);
+        // Mock execute(RedisCallback) to invoke the callback with the mocked connection,
+        // mirroring RedisTemplate's real behaviour of obtaining + releasing a connection.
+        lenient()
+                .doAnswer(
+                        invocation -> {
+                            RedisCallback<?> callback = invocation.getArgument(0);
+                            try {
+                                callback.doInRedis(connection);
+                            } finally {
+                                connection.close();
+                            }
+                            return null;
+                        })
+                .when(cacheRedisTemplate)
+                .execute(any(RedisCallback.class));
     }
 
     // ── Scenario 1 ─────────────────────────────────────────────────────────
