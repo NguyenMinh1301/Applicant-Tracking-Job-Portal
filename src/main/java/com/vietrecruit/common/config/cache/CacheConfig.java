@@ -30,13 +30,15 @@ public class CacheConfig {
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        // OBJECT_AND_NON_CONCRETE skips java.* and javax.* packages, preventing internal JDK
-        // collection implementations (e.g. ImmutableCollections$ListN from List.of()) from being
-        // written as type descriptors. NON_FINAL would include those and cause deserialization
-        // failures when the concrete class is non-public.
+        // NON_FINAL adds type info for all non-final types (ArrayList, PageImpl, DTOs, etc.).
+        // OBJECT_AND_NON_CONCRETE is unsuitable: it skips concrete types like ArrayList during
+        // serialization (no type wrapper written) but expects type info during deserialization
+        // (target type is Object.class), causing MismatchedInputException.
+        // Caveat: List.of() / Map.of() return package-private final JDK types that cannot be
+        // deserialized — always use Collectors.toList() or new ArrayList<>() in cached methods.
         mapper.activateDefaultTyping(
                 BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class).build(),
-                ObjectMapper.DefaultTyping.OBJECT_AND_NON_CONCRETE,
+                ObjectMapper.DefaultTyping.NON_FINAL,
                 JsonTypeInfo.As.PROPERTY);
         return mapper;
     }
