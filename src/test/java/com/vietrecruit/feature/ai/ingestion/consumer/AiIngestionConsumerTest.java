@@ -19,6 +19,7 @@ import com.vietrecruit.feature.ai.shared.event.CvUploadedEvent;
 import com.vietrecruit.feature.ai.shared.event.JobPublishedEvent;
 import com.vietrecruit.feature.ai.shared.service.EmbeddingService;
 import com.vietrecruit.feature.candidate.entity.Candidate;
+import com.vietrecruit.feature.candidate.repository.CandidateRepository;
 import com.vietrecruit.feature.candidate.service.CandidateService;
 import com.vietrecruit.feature.job.entity.Job;
 import com.vietrecruit.feature.job.service.JobService;
@@ -35,6 +36,7 @@ class AiIngestionConsumerTest {
 
     @Mock private EmbeddingService embeddingService;
     @Mock private CandidateService candidateService;
+    @Mock private CandidateRepository candidateRepository;
     @Mock private AiIngestionConsumer delegate;
 
     private CvUploadedIngestionConsumer cvConsumer;
@@ -56,7 +58,9 @@ class AiIngestionConsumerTest {
         jobId = UUID.randomUUID();
         employerId = UUID.randomUUID();
 
-        cvConsumer = new CvUploadedIngestionConsumer(embeddingService, candidateService, delegate);
+        cvConsumer =
+                new CvUploadedIngestionConsumer(
+                        embeddingService, candidateService, candidateRepository, delegate);
         jobConsumer =
                 new JobPublishedIngestionConsumer(embeddingService, jobService, locationRepository);
     }
@@ -221,7 +225,12 @@ class AiIngestionConsumerTest {
                 new ConsumerRecord<>("ai.cv-uploaded", 0, 0L, null, event);
 
         assertDoesNotThrow(
-                () -> cvConsumer.handleDlt(record, new RuntimeException("retries exhausted")));
+                () ->
+                        cvConsumer.handleDlt(
+                                record,
+                                "java.lang.RuntimeException".getBytes(),
+                                "retries exhausted".getBytes(),
+                                "ai.cv-uploaded".getBytes()));
     }
 
     @Test
@@ -232,7 +241,12 @@ class AiIngestionConsumerTest {
                 new ConsumerRecord<>("ai.job-published", 0, 0L, null, event);
 
         assertDoesNotThrow(
-                () -> jobConsumer.handleDlt(record, new RuntimeException("retries exhausted")));
+                () ->
+                        jobConsumer.handleDlt(
+                                record,
+                                "java.lang.RuntimeException".getBytes(),
+                                "retries exhausted".getBytes(),
+                                "ai.job-published".getBytes()));
     }
 
     @Test
@@ -242,6 +256,11 @@ class AiIngestionConsumerTest {
                 new ConsumerRecord<>("ai.cv-uploaded.DLT", 0, 0L, null, null);
 
         assertDoesNotThrow(
-                () -> cvConsumer.handleDlt(record, new RuntimeException("deserialization failed")));
+                () ->
+                        cvConsumer.handleDlt(
+                                record,
+                                "java.lang.RuntimeException".getBytes(),
+                                "deserialization failed".getBytes(),
+                                "ai.cv-uploaded.DLT".getBytes()));
     }
 }
