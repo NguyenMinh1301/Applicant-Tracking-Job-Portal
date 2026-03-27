@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
@@ -71,6 +74,7 @@ class AuthServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        TransactionSynchronizationManager.initSynchronization();
         testPermission = new Permission();
         testPermission.setCode("USER:READ");
 
@@ -90,6 +94,11 @@ class AuthServiceImplTest {
                         .emailVerified(true)
                         .build();
         testUser.getRoles().add(testRole);
+    }
+
+    @AfterEach
+    void tearDown() {
+        TransactionSynchronizationManager.clear();
     }
 
     // ── Login Tests ─────────────────────────────────────────────────────
@@ -223,6 +232,11 @@ class AuthServiceImplTest {
                         });
 
         authService.register(request);
+
+        for (TransactionSynchronization sync :
+                TransactionSynchronizationManager.getSynchronizations()) {
+            sync.afterCommit();
+        }
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository, times(1)).save(userCaptor.capture());

@@ -7,6 +7,8 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.enums.EmailSenderAlias;
@@ -184,7 +186,14 @@ public class OfferServiceImpl implements OfferService {
         offer.setUpdatedBy(userId);
         offer = offerRepository.save(offer);
 
-        sendOfferReceivedNotification(offer, application);
+        final Offer sentOffer = offer;
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        sendOfferReceivedNotification(sentOffer, application);
+                    }
+                });
 
         return offerMapper.toResponse(offer);
     }

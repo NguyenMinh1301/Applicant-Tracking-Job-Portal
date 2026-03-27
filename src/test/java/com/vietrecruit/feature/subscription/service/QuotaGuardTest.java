@@ -68,78 +68,87 @@ class QuotaGuardTest {
     }
 
     @Test
-    @DisplayName("Should pass validation with valid subscription and remaining quota")
-    void validateCanPublishJob_Success() {
+    @DisplayName(
+            "Should atomically validate and increment with valid subscription and remaining quota")
+    void validateAndIncrementActiveJobs_Success() {
         when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
-        when(quotaRepository.findBySubscriptionId(subscription.getId()))
-                .thenReturn(Optional.of(quota));
+        // atomicIncrementIfUnderLimit returns 1 → success
+        when(quotaRepository.atomicIncrementIfUnderLimit(
+                        subscription.getId(), plan.getMaxActiveJobs()))
+                .thenReturn(1);
 
-        assertDoesNotThrow(() -> quotaGuard.validateCanPublishJob(companyId));
+        assertDoesNotThrow(() -> quotaGuard.validateAndIncrementActiveJobs(companyId));
     }
 
     @Test
     @DisplayName("Should throw SUBSCRIPTION_REQUIRED when no active subscription")
-    void validateCanPublishJob_NoSubscription() {
+    void validateAndIncrementActiveJobs_NoSubscription() {
         when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.empty());
 
         var ex =
-                assertThrows(ApiException.class, () -> quotaGuard.validateCanPublishJob(companyId));
+                assertThrows(
+                        ApiException.class,
+                        () -> quotaGuard.validateAndIncrementActiveJobs(companyId));
         assertEquals(ApiErrorCode.SUBSCRIPTION_REQUIRED, ex.getErrorCode());
     }
 
     @Test
     @DisplayName("Should throw SUBSCRIPTION_EXPIRED when subscription is past expiry")
-    void validateCanPublishJob_Expired() {
+    void validateAndIncrementActiveJobs_Expired() {
         subscription.setExpiresAt(Instant.now().minus(1, ChronoUnit.DAYS));
         when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
 
         var ex =
-                assertThrows(ApiException.class, () -> quotaGuard.validateCanPublishJob(companyId));
+                assertThrows(
+                        ApiException.class,
+                        () -> quotaGuard.validateAndIncrementActiveJobs(companyId));
         assertEquals(ApiErrorCode.SUBSCRIPTION_EXPIRED, ex.getErrorCode());
     }
 
     @Test
-    @DisplayName("Should throw QUOTA_EXCEEDED when active jobs at limit")
-    void validateCanPublishJob_QuotaExceeded() {
-        quota.setJobsActive(5); // equals maxActiveJobs
+    @DisplayName("Should throw QUOTA_EXCEEDED when atomicIncrementIfUnderLimit returns 0")
+    void validateAndIncrementActiveJobs_QuotaExceeded() {
         when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
-        when(quotaRepository.findBySubscriptionId(subscription.getId()))
-                .thenReturn(Optional.of(quota));
+        // 0 rows updated → limit already reached
+        when(quotaRepository.atomicIncrementIfUnderLimit(
+                        subscription.getId(), plan.getMaxActiveJobs()))
+                .thenReturn(0);
 
         var ex =
-                assertThrows(ApiException.class, () -> quotaGuard.validateCanPublishJob(companyId));
+                assertThrows(
+                        ApiException.class,
+                        () -> quotaGuard.validateAndIncrementActiveJobs(companyId));
         assertEquals(ApiErrorCode.QUOTA_EXCEEDED, ex.getErrorCode());
     }
 
     @Test
-    @DisplayName("Should skip quota check for unlimited plan")
-    void validateCanPublishJob_UnlimitedPlan() {
+    @DisplayName(
+            "Unlimited plan (-1) — atomicIncrementIfUnderLimit is still called with -1 limit and must succeed")
+    void validateAndIncrementActiveJobs_UnlimitedPlan() {
         plan.setMaxActiveJobs(-1);
-        quota.setJobsActive(999);
         when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
+        when(quotaRepository.atomicIncrementIfUnderLimit(subscription.getId(), -1)).thenReturn(1);
 
-        assertDoesNotThrow(() -> quotaGuard.validateCanPublishJob(companyId));
-        verify(quotaRepository, never()).findBySubscriptionId(any());
+        assertDoesNotThrow(() -> quotaGuard.validateAndIncrementActiveJobs(companyId));
     }
 
     @Test
-    @DisplayName("Should increment active and posted counts")
-    void incrementActiveJobs_Success() {
+    @DisplayName("Atomic validate+increment completes without error when DB reports 1 row updated")
+    void validateAndIncrementActiveJobs_DbReturnsOneRow_success() {
         when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
-        when(quotaRepository.findBySubscriptionId(subscription.getId()))
-                .thenReturn(Optional.of(quota));
+        when(quotaRepository.atomicIncrementIfUnderLimit(
+                        subscription.getId(), plan.getMaxActiveJobs()))
+                .thenReturn(1);
 
-        quotaGuard.incrementActiveJobs(companyId);
-
-        assertEquals(3, quota.getJobsActive());
-        assertEquals(11, quota.getJobsPosted());
-        verify(quotaRepository).save(quota);
+        assertDoesNotThrow(() -> quotaGuard.validateAndIncrementActiveJobs(companyId));
+        verify(quotaRepository)
+                .atomicIncrementIfUnderLimit(subscription.getId(), plan.getMaxActiveJobs());
     }
 
     @Test

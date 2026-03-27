@@ -95,7 +95,7 @@ class JobServiceImplConcurrencyTest {
                             return null;
                         })
                 .when(quotaGuard)
-                .validateCanPublishJob(companyId);
+                .validateAndIncrementActiveJobs(companyId);
 
         CountDownLatch startGate = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(n);
@@ -125,9 +125,8 @@ class JobServiceImplConcurrencyTest {
         executor.shutdown();
 
         // Exactly 1 job was published (quota guard allowed exactly 1)
-        verify(quotaGuard, times(1)).incrementActiveJobs(companyId);
-        // 10 calls to validateCanPublishJob, 9 threw QUOTA_EXCEEDED
-        verify(quotaGuard, times(n)).validateCanPublishJob(companyId);
+        // 10 calls to validateAndIncrementActiveJobs, 9 threw QUOTA_EXCEEDED
+        verify(quotaGuard, times(n)).validateAndIncrementActiveJobs(companyId);
     }
 
     // ── Scenario: quota = 0 from the start ─────────────────────────────────
@@ -141,13 +140,13 @@ class JobServiceImplConcurrencyTest {
         when(jobRepository.findById(jobId)).thenReturn(Optional.of(draft));
         doThrow(new ApiException(ApiErrorCode.QUOTA_EXCEEDED))
                 .when(quotaGuard)
-                .validateCanPublishJob(companyId);
+                .validateAndIncrementActiveJobs(companyId);
 
         ApiException ex =
                 assertThrows(ApiException.class, () -> jobService.publishJob(companyId, jobId));
 
         assertEquals(ApiErrorCode.QUOTA_EXCEEDED, ex.getErrorCode());
-        verify(quotaGuard, never()).incrementActiveJobs(any());
+        verify(quotaGuard, times(1)).validateAndIncrementActiveJobs(companyId);
         verify(jobRepository, never()).save(any());
     }
 }

@@ -10,6 +10,8 @@ import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.enums.EmailSenderAlias;
@@ -98,17 +100,26 @@ public class InvitationServiceImpl implements InvitationService {
 
         String inviteLink = String.format("%s/register/invite?token=%s", frontendBaseUrl, token);
 
-        notificationService.send(
-                new EmailRequest(
-                        List.of(request.getEmail()),
-                        EmailSenderAlias.AUTHENTICATION,
-                        "You've Been Invited to Join VietRecruit",
-                        null,
-                        "team-invitation",
-                        Map.of(
-                                "inviterName", inviter.getFullName(),
-                                "role", roleCode,
-                                "inviteLink", inviteLink)));
+        final String email = request.getEmail();
+        final String inviterName = inviter.getFullName();
+        final String link = inviteLink;
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        notificationService.send(
+                                new EmailRequest(
+                                        List.of(email),
+                                        EmailSenderAlias.AUTHENTICATION,
+                                        "You've Been Invited to Join VietRecruit",
+                                        null,
+                                        "team-invitation",
+                                        Map.of(
+                                                "inviterName", inviterName,
+                                                "role", roleCode,
+                                                "inviteLink", link)));
+                    }
+                });
 
         log.info(
                 "Invitation created: email={}, role={}, companyId={}, invitedBy={}",

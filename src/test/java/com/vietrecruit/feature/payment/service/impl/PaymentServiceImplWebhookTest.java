@@ -45,6 +45,7 @@ class PaymentServiceImplWebhookTest {
     @Mock private PaymentTransactionRepository paymentTransactionRepository;
     @Mock private TransactionRecordRepository transactionRecordRepository;
     @Mock private SubscriptionService subscriptionService;
+    @Mock private SubscriptionActivationService subscriptionActivationService;
     @Mock private PaymentMapper paymentMapper;
 
     private PaymentServiceImpl paymentService;
@@ -65,6 +66,7 @@ class PaymentServiceImplWebhookTest {
                         paymentTransactionRepository,
                         transactionRecordRepository,
                         subscriptionService,
+                        subscriptionActivationService,
                         paymentMapper,
                         new SimpleMeterRegistry());
     }

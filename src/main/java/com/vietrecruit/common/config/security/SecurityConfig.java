@@ -110,9 +110,9 @@ public class SecurityConfig {
                                         .requestMatchers(clientEndpoints)
                                         .authenticated()
                                         .requestMatchers(adminEndpoints)
-                                        .hasAnyAuthority("SYSTEM_ADMIN", "COMPANY_ADMIN")
+                                        .hasAnyRole("SYSTEM_ADMIN", "COMPANY_ADMIN")
                                         .requestMatchers("/actuator/**")
-                                        .hasAuthority("SYSTEM_ADMIN")
+                                        .hasRole("SYSTEM_ADMIN")
                                         .anyRequest()
                                         .authenticated())
                 .oauth2Login(

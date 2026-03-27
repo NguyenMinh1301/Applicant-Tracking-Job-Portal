@@ -46,11 +46,12 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
                     """
 			SELECT pt.* FROM payment_transactions pt
 			WHERE pt.status = 'PAID'
+			AND pt.updated_at > :cutoff
 			AND pt.company_id NOT IN (
 				SELECT es.company_id FROM employer_subscriptions es
 				WHERE es.status = 'ACTIVE'
 			)
 			""",
             nativeQuery = true)
-    List<PaymentTransaction> findPaidWithoutActiveSubscription();
+    List<PaymentTransaction> findPaidWithoutActiveSubscription(@Param("cutoff") Instant cutoff);
 }

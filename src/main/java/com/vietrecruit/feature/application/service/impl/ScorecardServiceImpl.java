@@ -105,7 +105,7 @@ public class ScorecardServiceImpl implements ScorecardService {
     }
 
     private void validateInterviewReady(Interview interview) {
-        if (interview.getStatus() == InterviewStatus.CANCELED) {
+        if (interview.getStatus() != InterviewStatus.COMPLETED) {
             throw new ApiException(ApiErrorCode.SCORECARD_INTERVIEW_NOT_READY);
         }
     }

@@ -15,6 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
@@ -91,9 +93,16 @@ public class KnowledgeIngestionServiceImpl implements KnowledgeIngestionService 
                         .build();
         doc = repository.save(doc);
 
-        KnowledgeUploadedEvent event =
-                new KnowledgeUploadedEvent(doc.getId(), fileKey, category, title);
-        kafkaTemplate.send(TOPIC_KNOWLEDGE_UPLOADED, doc.getId().toString(), event);
+        final UUID docId = doc.getId();
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        KnowledgeUploadedEvent event =
+                                new KnowledgeUploadedEvent(docId, fileKey, category, title);
+                        kafkaTemplate.send(TOPIC_KNOWLEDGE_UPLOADED, docId.toString(), event);
+                    }
+                });
 
         log.info(
                 "Knowledge document uploaded: id={}, title={}, category={}",

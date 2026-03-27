@@ -1,5 +1,8 @@
 package com.vietrecruit.feature.payment.service;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +25,8 @@ public class PaymentActivationRecoveryTask {
 
     @Scheduled(fixedRate = 300_000) // 5 minutes
     public void recoverFailedActivations() {
-        var orphaned = paymentTransactionRepository.findPaidWithoutActiveSubscription();
+        var cutoff = Instant.now().minus(24, ChronoUnit.HOURS);
+        var orphaned = paymentTransactionRepository.findPaidWithoutActiveSubscription(cutoff);
 
         if (orphaned.isEmpty()) {
             log.debug("No paid-without-subscription payments found");

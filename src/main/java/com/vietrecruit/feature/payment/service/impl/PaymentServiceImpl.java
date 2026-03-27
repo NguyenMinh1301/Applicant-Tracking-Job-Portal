@@ -8,7 +8,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,6 +55,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final TransactionRecordRepository transactionRecordRepository;
     private final SubscriptionService subscriptionService;
+    private final SubscriptionActivationService subscriptionActivationService;
     private final PaymentMapper paymentMapper;
     private final Counter webhookSignatureFailureCounter;
 
@@ -68,6 +68,7 @@ public class PaymentServiceImpl implements PaymentService {
             PaymentTransactionRepository paymentTransactionRepository,
             TransactionRecordRepository transactionRecordRepository,
             SubscriptionService subscriptionService,
+            SubscriptionActivationService subscriptionActivationService,
             PaymentMapper paymentMapper,
             MeterRegistry meterRegistry) {
         this.payOS = payOS;
@@ -78,6 +79,7 @@ public class PaymentServiceImpl implements PaymentService {
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.transactionRecordRepository = transactionRecordRepository;
         this.subscriptionService = subscriptionService;
+        this.subscriptionActivationService = subscriptionActivationService;
         this.paymentMapper = paymentMapper;
         this.webhookSignatureFailureCounter =
                 Counter.builder("webhook.signature.failure")
@@ -273,9 +275,9 @@ public class PaymentServiceImpl implements PaymentService {
                     tx.getCompanyId(),
                     tx.getPlan().getCode());
 
-            // TX 2: Activate subscription in a separate transaction
+            // TX 2: Activate subscription in a separate transaction (via injected bean)
             // If this fails, the recovery job will pick it up
-            tryActivateSubscription(tx);
+            subscriptionActivationService.tryActivateSubscription(tx);
         } else {
             // Payment cancelled or failed
             tx.setStatus(PaymentStatus.CANCELLED);
@@ -288,26 +290,6 @@ public class PaymentServiceImpl implements PaymentService {
                     orderCode,
                     code,
                     data.getDesc());
-        }
-    }
-
-    /**
-     * TX 2: Activate subscription in a separate transaction. If this fails, the PAID status from TX
-     * 1 is already committed and the recovery job will retry.
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void tryActivateSubscription(PaymentTransaction tx) {
-        try {
-            subscriptionService.activateSubscription(
-                    tx.getCompanyId(), tx.getPlan(), tx.getBillingCycle());
-        } catch (Exception e) {
-            log.error(
-                    "Subscription activation failed for orderCode={}, company={}. "
-                            + "Recovery job will retry. Error: {}",
-                    tx.getOrderCode(),
-                    tx.getCompanyId(),
-                    e.getMessage(),
-                    e);
         }
     }
 
@@ -327,8 +309,7 @@ public class PaymentServiceImpl implements PaymentService {
             return;
         }
 
-        subscriptionService.activateSubscription(
-                tx.getCompanyId(), tx.getPlan(), tx.getBillingCycle());
+        subscriptionActivationService.activateSubscription(tx);
 
         log.info(
                 "Recovery: subscription activated for orderCode={}, company={}",

@@ -3,7 +3,6 @@ package com.vietrecruit.feature.subscription.service;
 import java.time.Instant;
 import java.util.UUID;
 
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
@@ -26,33 +25,23 @@ public class QuotaGuard {
     private final JobPostingQuotaRepository quotaRepository;
 
     /**
-     * Validates that the company has a valid, non-expired subscription with remaining quota to
-     * publish a job.
+     * Atomically validates quota availability and increments active job count in a single DB
+     * statement. Eliminates the TOCTOU race between separate validate and increment calls.
+     *
+     * @throws ApiException with QUOTA_EXCEEDED if the limit is reached
+     * @throws ApiException with SUBSCRIPTION_EXPIRED if subscription has expired
      */
-    public void validateCanPublishJob(UUID companyId) {
+    public void validateAndIncrementActiveJobs(UUID companyId) {
         var subscription = getActiveSubscription(companyId);
         validateNotExpired(subscription);
-        validateQuotaAvailable(subscription);
-    }
 
-    /**
-     * Increments active job count and total posted count for the company's current quota. Call this
-     * when a job transitions to PUBLISHED.
-     *
-     * @throws ApiException with CONFLICT code if a concurrent update is detected (optimistic lock
-     *     failure)
-     */
-    public void incrementActiveJobs(UUID companyId) {
-        var subscription = getActiveSubscription(companyId);
-        var quota = getQuota(subscription);
-        quota.setJobsActive(quota.getJobsActive() + 1);
-        quota.setJobsPosted(quota.getJobsPosted() + 1);
-        try {
-            quotaRepository.save(quota);
-        } catch (ObjectOptimisticLockingFailureException e) {
-            log.warn("Optimistic lock failure on quota increment for company={}", companyId);
+        int maxActiveJobs = subscription.getPlan().getMaxActiveJobs();
+        int updated =
+                quotaRepository.atomicIncrementIfUnderLimit(subscription.getId(), maxActiveJobs);
+        if (updated == 0) {
             throw new ApiException(
-                    ApiErrorCode.CONFLICT, "Concurrent quota update detected, please retry");
+                    ApiErrorCode.QUOTA_EXCEEDED,
+                    String.format("Active job limit reached. Upgrade your plan for more."));
         }
     }
 
