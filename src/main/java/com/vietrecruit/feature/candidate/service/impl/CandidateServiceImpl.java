@@ -37,7 +37,6 @@ import com.vietrecruit.feature.candidate.service.CandidateService;
 import com.vietrecruit.feature.user.repository.UserRepository;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

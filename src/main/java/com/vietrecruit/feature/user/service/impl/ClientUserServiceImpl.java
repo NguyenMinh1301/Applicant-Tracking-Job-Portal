@@ -7,6 +7,8 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
@@ -23,7 +25,6 @@ import com.vietrecruit.feature.user.repository.UserRepository;
 import com.vietrecruit.feature.user.service.ClientUserService;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -70,7 +71,6 @@ public class ClientUserServiceImpl implements ClientUserService {
     @Override
     @Transactional
     @CircuitBreaker(name = "r2Storage", fallbackMethod = "uploadAvatarFallback")
-    @Retry(name = "r2Storage")
     public AvatarUploadResponse uploadAvatar(MultipartFile file) {
         validateImageFile(
                 file,
@@ -84,17 +84,50 @@ public class ClientUserServiceImpl implements ClientUserService {
                         .findById(userId)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND));
 
-        // Delete old avatar from R2 if exists
-        deleteR2Object(user.getAvatarObjectKey());
+        String oldAvatarKey = user.getAvatarObjectKey();
 
         String ext = extractExtension(file.getOriginalFilename());
         String objectKey = String.format("users/%s/avatar/%s.%s", userId, UUID.randomUUID(), ext);
 
+        // Upload to R2 first (outside DB save try-catch for compensation)
         String publicUrl = doUpload(objectKey, file);
 
         user.setAvatarUrl(publicUrl);
         user.setAvatarObjectKey(objectKey);
-        userRepository.save(user);
+
+        // DB save with compensation: delete R2 object if DB fails
+        try {
+            userRepository.save(user);
+        } catch (Exception e) {
+            log.error("DB save failed after R2 avatar upload, compensating: key={}", objectKey);
+            try {
+                storageService.delete(objectKey);
+            } catch (Exception deleteEx) {
+                log.error(
+                        "Compensation delete failed for key={}: {}",
+                        objectKey,
+                        deleteEx.getMessage());
+            }
+            throw e;
+        }
+
+        // Delete old avatar only after DB commit succeeds
+        if (oldAvatarKey != null) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            try {
+                                storageService.delete(oldAvatarKey);
+                            } catch (Exception e) {
+                                log.warn(
+                                        "Failed to delete old avatar: key={}",
+                                        oldAvatarKey,
+                                        e);
+                            }
+                        }
+                    });
+        }
 
         return AvatarUploadResponse.builder()
                 .avatarUrl(publicUrl)
@@ -139,7 +172,6 @@ public class ClientUserServiceImpl implements ClientUserService {
     @Override
     @Transactional
     @CircuitBreaker(name = "r2Storage", fallbackMethod = "uploadBannerFallback")
-    @Retry(name = "r2Storage")
     public BannerUploadResponse uploadBanner(MultipartFile file) {
         validateImageFile(
                 file,
@@ -153,17 +185,50 @@ public class ClientUserServiceImpl implements ClientUserService {
                         .findById(userId)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND));
 
-        // Delete old banner from R2 if exists
-        deleteR2Object(user.getBannerObjectKey());
+        String oldBannerKey = user.getBannerObjectKey();
 
         String ext = extractExtension(file.getOriginalFilename());
         String objectKey = String.format("users/%s/banner/%s.%s", userId, UUID.randomUUID(), ext);
 
+        // Upload to R2 first (outside DB save try-catch for compensation)
         String publicUrl = doUpload(objectKey, file);
 
         user.setBannerUrl(publicUrl);
         user.setBannerObjectKey(objectKey);
-        userRepository.save(user);
+
+        // DB save with compensation: delete R2 object if DB fails
+        try {
+            userRepository.save(user);
+        } catch (Exception e) {
+            log.error("DB save failed after R2 banner upload, compensating: key={}", objectKey);
+            try {
+                storageService.delete(objectKey);
+            } catch (Exception deleteEx) {
+                log.error(
+                        "Compensation delete failed for key={}: {}",
+                        objectKey,
+                        deleteEx.getMessage());
+            }
+            throw e;
+        }
+
+        // Delete old banner only after DB commit succeeds
+        if (oldBannerKey != null) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            try {
+                                storageService.delete(oldBannerKey);
+                            } catch (Exception e) {
+                                log.warn(
+                                        "Failed to delete old banner: key={}",
+                                        oldBannerKey,
+                                        e);
+                            }
+                        }
+                    });
+        }
 
         return BannerUploadResponse.builder()
                 .bannerUrl(publicUrl)
