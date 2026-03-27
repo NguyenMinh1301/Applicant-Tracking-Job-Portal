@@ -2,9 +2,11 @@ package com.vietrecruit.feature.company.controller;
 
 import jakarta.validation.Valid;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +18,8 @@ import com.vietrecruit.common.base.BaseController;
 import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.response.ApiResponse;
 import com.vietrecruit.common.response.SearchPageResponse;
+import com.vietrecruit.common.security.SecurityUtils;
+import com.vietrecruit.feature.company.dto.request.CompanyCreateRequest;
 import com.vietrecruit.feature.company.dto.request.CompanySearchRequest;
 import com.vietrecruit.feature.company.dto.request.CompanyUpdateRequest;
 import com.vietrecruit.feature.company.dto.response.CompanyResponse;
@@ -51,6 +55,23 @@ public class CompanyController extends BaseController {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         ApiSuccessCode.SEARCH_SUCCESS, companySearchService.search(request)));
+    }
+
+    @Operation(
+            summary = "Create Company",
+            description =
+                    "Creates a new company and associates it with the authenticated user."
+                            + " Only for COMPANY_ADMIN users without an existing company.")
+    @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PostMapping(ApiConstants.Company.CREATE)
+    public ResponseEntity<ApiResponse<CompanyResponse>> createCompany(
+            @Valid @RequestBody CompanyCreateRequest request) {
+        var userId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(
+                        ApiResponse.success(
+                                ApiSuccessCode.COMPANY_CREATE_SUCCESS,
+                                companyService.createCompany(userId, request)));
     }
 
     @Operation(

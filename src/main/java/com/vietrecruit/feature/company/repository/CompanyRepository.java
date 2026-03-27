@@ -11,5 +11,7 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
 
     Optional<Company> findByIdAndDeletedAtIsNull(UUID id);
 
+    boolean existsByDomain(String domain);
+
     boolean existsByDomainAndIdNot(String domain, UUID id);
 }

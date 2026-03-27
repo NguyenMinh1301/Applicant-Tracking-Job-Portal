@@ -112,6 +112,7 @@ public final class ApiConstants {
         private Company() {}
 
         public static final String ROOT = API_VERSION + "/companies";
+        public static final String CREATE = "";
         public static final String ME = "/me";
         public static final String SEARCH = "/search";
     }

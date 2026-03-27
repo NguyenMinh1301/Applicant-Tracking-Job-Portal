@@ -62,6 +62,7 @@ public enum ApiSuccessCode {
     JOB_LIST_SUCCESS("JOB_LIST_SUCCESS", "Job list retrieved successfully"),
 
     // Company
+    COMPANY_CREATE_SUCCESS("COMPANY_CREATE_SUCCESS", "Company created successfully"),
     COMPANY_FETCH_SUCCESS("COMPANY_FETCH_SUCCESS", "Company retrieved successfully"),
     COMPANY_UPDATE_SUCCESS("COMPANY_UPDATE_SUCCESS", "Company updated successfully"),
 

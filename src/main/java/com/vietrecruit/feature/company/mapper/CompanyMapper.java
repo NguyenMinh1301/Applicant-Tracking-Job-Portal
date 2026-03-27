@@ -5,6 +5,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
+import com.vietrecruit.feature.company.dto.request.CompanyCreateRequest;
 import com.vietrecruit.feature.company.dto.request.CompanyUpdateRequest;
 import com.vietrecruit.feature.company.dto.response.CompanyResponse;
 import com.vietrecruit.feature.company.entity.Company;
@@ -13,6 +14,8 @@ import com.vietrecruit.feature.company.entity.Company;
 public interface CompanyMapper {
 
     CompanyResponse toResponse(Company company);
+
+    Company toEntity(CompanyCreateRequest request);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateEntity(CompanyUpdateRequest request, @MappingTarget Company company);
