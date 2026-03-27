@@ -146,7 +146,7 @@ class JobServiceImplConcurrencyTest {
                 assertThrows(ApiException.class, () -> jobService.publishJob(companyId, jobId));
 
         assertEquals(ApiErrorCode.QUOTA_EXCEEDED, ex.getErrorCode());
-        verify(quotaGuard, never()).validateAndIncrementActiveJobs(any());
+        verify(quotaGuard, times(1)).validateAndIncrementActiveJobs(companyId);
         verify(jobRepository, never()).save(any());
     }
 }
