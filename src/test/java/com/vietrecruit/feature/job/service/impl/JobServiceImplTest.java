@@ -80,8 +80,7 @@ class JobServiceImplTest {
         var published = jobService.publishJob(companyId, jobId);
 
         assertEquals(JobStatus.PUBLISHED, published.getStatus());
-        verify(quotaGuard).validateCanPublishJob(companyId);
-        verify(quotaGuard).incrementActiveJobs(companyId);
+        verify(quotaGuard).validateAndIncrementActiveJobs(companyId);
     }
 
     @Test
