@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.enums.EmailSenderAlias;
@@ -160,14 +162,22 @@ public class AuthServiceImpl implements AuthService {
         authCacheService.storeOtp(request.getEmail(), otpCode, user.getId(), OTP_TTL_SECONDS);
         authCacheService.setCooldown(request.getEmail(), OTP_COOLDOWN_SECONDS);
 
-        notificationService.send(
-                new EmailRequest(
-                        List.of(user.getEmail()),
-                        EmailSenderAlias.AUTHENTICATION,
-                        "Verify Your Email Address",
-                        null,
-                        "email-verification",
-                        Map.of("otpCode", otpCode, "fullName", user.getFullName())));
+        final String userEmail = user.getEmail();
+        final String fullName = user.getFullName();
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        notificationService.send(
+                                new EmailRequest(
+                                        List.of(userEmail),
+                                        EmailSenderAlias.AUTHENTICATION,
+                                        "Verify Your Email Address",
+                                        null,
+                                        "email-verification",
+                                        Map.of("otpCode", otpCode, "fullName", fullName)));
+                    }
+                });
 
         return Map.of("accountType", accountType);
     }
