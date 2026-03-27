@@ -18,7 +18,7 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     Optional<Application> findByIdAndDeletedAtIsNull(UUID id);
 
-    boolean existsByJobIdAndCandidateId(UUID jobId, UUID candidateId);
+    boolean existsByJobIdAndCandidateIdAndDeletedAtIsNull(UUID jobId, UUID candidateId);
 
     @Query(
             nativeQuery = true,

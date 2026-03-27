@@ -11,6 +11,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.dao.DataIntegrityViolationException;
+
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.enums.EmailSenderAlias;
 import com.vietrecruit.common.exception.ApiException;
@@ -85,7 +87,8 @@ public class ApplicationServiceImpl implements ApplicationService {
                                 request.getJobId(), JobStatus.PUBLISHED)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.JOB_NOT_PUBLISHED));
 
-        if (applicationRepository.existsByJobIdAndCandidateId(job.getId(), candidate.getId())) {
+        if (applicationRepository.existsByJobIdAndCandidateIdAndDeletedAtIsNull(
+                job.getId(), candidate.getId())) {
             throw new ApiException(ApiErrorCode.APPLICATION_DUPLICATE);
         }
 
@@ -98,7 +101,11 @@ public class ApplicationServiceImpl implements ApplicationService {
                         .status(ApplicationStatus.NEW)
                         .build();
 
-        application = applicationRepository.save(application);
+        try {
+            application = applicationRepository.save(application);
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiException(ApiErrorCode.APPLICATION_DUPLICATE);
+        }
 
         insertHistory(application.getId(), null, ApplicationStatus.NEW, userId, null);
 
