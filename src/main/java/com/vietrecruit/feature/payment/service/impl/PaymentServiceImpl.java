@@ -149,6 +149,22 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         try {
+            // Persist the transaction BEFORE calling PayOS.
+            // If DB write fails the PayOS API is never called, preventing orphaned payment links.
+            // If PayOS call fails, @Transactional rolls back the DB record automatically.
+            PaymentTransaction transaction =
+                    PaymentTransaction.builder()
+                            .orderCode(orderCode)
+                            .companyId(companyId)
+                            .plan(plan)
+                            .billingCycle(cycle)
+                            .amount(amount)
+                            .status(PaymentStatus.PENDING)
+                            .payosReference(String.valueOf(orderCode))
+                            .build();
+
+            paymentTransactionRepository.saveAndFlush(transaction);
+
             PaymentLinkItem item =
                     PaymentLinkItem.builder()
                             .name(plan.getName())
@@ -168,19 +184,8 @@ public class PaymentServiceImpl implements PaymentService {
 
             CreatePaymentLinkResponse response = payOS.paymentRequests().create(paymentRequest);
 
-            PaymentTransaction transaction =
-                    PaymentTransaction.builder()
-                            .orderCode(orderCode)
-                            .companyId(companyId)
-                            .plan(plan)
-                            .billingCycle(cycle)
-                            .amount(amount)
-                            .status(PaymentStatus.PENDING)
-                            .checkoutUrl(response.getCheckoutUrl())
-                            .payosReference(String.valueOf(orderCode))
-                            .build();
-
-            paymentTransactionRepository.save(transaction);
+            // Update the persisted record with the PayOS checkout URL
+            transaction.setCheckoutUrl(response.getCheckoutUrl());
 
             return paymentMapper.toCheckoutResponse(transaction);
 
