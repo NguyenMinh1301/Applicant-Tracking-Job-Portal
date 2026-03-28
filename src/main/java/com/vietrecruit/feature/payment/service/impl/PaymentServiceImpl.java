@@ -1,10 +1,10 @@
 package com.vietrecruit.feature.payment.service.impl;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -47,6 +47,7 @@ import vn.payos.model.webhooks.WebhookData;
 public class PaymentServiceImpl implements PaymentService {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final PayOS payOS;
     private final PayOSConfig payOSConfig;
@@ -134,12 +135,13 @@ public class PaymentServiceImpl implements PaymentService {
                                     companyId);
                         });
 
-        // Generate unique order code using timestamp to avoid PayOS duplicates after
-        // local DB reset
+        // Generate unique order code: 13-digit epoch ms + 6-digit cryptographic random suffix.
+        // SecureRandom provides 20 bits of entropy per code (1_000_000 possibilities per ms),
+        // eliminating the 2-digit ThreadLocalRandom window that allowed collision under load.
         Long orderCode =
                 Long.parseLong(
                         System.currentTimeMillis()
-                                + String.valueOf(ThreadLocalRandom.current().nextInt(10, 100)));
+                                + String.format("%06d", SECURE_RANDOM.nextInt(1_000_000)));
 
         // Build PayOS payment link request
         String description = "VietRecruit " + plan.getName() + " - " + cycle.name();
