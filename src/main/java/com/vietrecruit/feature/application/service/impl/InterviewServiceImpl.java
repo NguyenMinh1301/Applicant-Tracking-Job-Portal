@@ -133,7 +133,7 @@ public class InterviewServiceImpl implements InterviewService {
     public InterviewResponse getInterview(UUID interviewId, UUID userId) {
         var interview =
                 interviewRepository
-                        .findByIdAndDeletedAtIsNull(interviewId)
+                        .findByIdWithInterviewers(interviewId)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.INTERVIEW_NOT_FOUND));
 
         var application =

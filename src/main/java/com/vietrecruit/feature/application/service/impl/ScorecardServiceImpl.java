@@ -43,7 +43,7 @@ public class ScorecardServiceImpl implements ScorecardService {
 
         var interview =
                 interviewRepository
-                        .findByIdAndDeletedAtIsNull(interviewId)
+                        .findByIdWithInterviewers(interviewId)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.INTERVIEW_NOT_FOUND));
 
         // Validate interview status

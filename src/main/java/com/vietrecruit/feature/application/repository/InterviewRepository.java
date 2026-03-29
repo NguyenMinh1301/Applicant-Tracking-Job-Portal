@@ -17,6 +17,12 @@ public interface InterviewRepository extends JpaRepository<Interview, UUID> {
 
     Optional<Interview> findByIdAndDeletedAtIsNull(UUID id);
 
+    @Query(
+            "SELECT DISTINCT i FROM Interview i "
+                    + "LEFT JOIN FETCH i.interviewers "
+                    + "WHERE i.id = :id AND i.deletedAt IS NULL")
+    Optional<Interview> findByIdWithInterviewers(@Param("id") UUID id);
+
     List<Interview> findByApplicationIdAndDeletedAtIsNull(UUID applicationId);
 
     boolean existsByApplicationIdAndStatusAndDeletedAtIsNull(
