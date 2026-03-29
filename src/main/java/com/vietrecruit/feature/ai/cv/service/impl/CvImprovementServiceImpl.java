@@ -80,6 +80,9 @@ public class CvImprovementServiceImpl implements CvImprovementService {
                         .orElseThrow(() -> new ApiException(ApiErrorCode.CANDIDATE_NOT_FOUND));
 
         if (candidate.getParsedCvText() == null || candidate.getParsedCvText().isBlank()) {
+            if (candidate.getCvUploadedAt() != null) {
+                throw new ApiException(ApiErrorCode.CV_NOT_YET_PROCESSED);
+            }
             throw new ApiException(ApiErrorCode.CV_NOT_PARSED);
         }
 
