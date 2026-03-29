@@ -13,6 +13,7 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 
+import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.ai.shared.event.CvUploadedEvent;
 import com.vietrecruit.feature.ai.shared.service.EmbeddingService;
 import com.vietrecruit.feature.candidate.entity.Candidate;
@@ -38,7 +39,8 @@ public class CvUploadedIngestionConsumer {
             attempts = "3",
             backoff = @Backoff(delay = 2000, multiplier = 2),
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE,
-            dltStrategy = DltStrategy.FAIL_ON_ERROR)
+            dltStrategy = DltStrategy.FAIL_ON_ERROR,
+            exclude = {ApiException.class})
     @KafkaListener(topics = TOPIC_CV_UPLOADED, groupId = "ai-ingestion-cv-group")
     public void consume(CvUploadedEvent event) {
         log.info("AI ingestion: CV uploaded event received: candidateId={}", event.candidateId());
