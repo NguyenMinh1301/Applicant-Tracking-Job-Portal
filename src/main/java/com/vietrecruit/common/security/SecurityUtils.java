@@ -10,6 +10,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.vietrecruit.common.enums.ApiErrorCode;
+import com.vietrecruit.common.exception.ApiException;
+
 public final class SecurityUtils {
 
     private SecurityUtils() {}
@@ -17,9 +20,13 @@ public final class SecurityUtils {
     public static UUID getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || auth.getPrincipal() == null) {
-            throw new IllegalStateException("No authenticated user in security context");
+            throw new ApiException(ApiErrorCode.UNAUTHORIZED);
         }
-        return UUID.fromString(auth.getPrincipal().toString());
+        try {
+            return UUID.fromString(auth.getPrincipal().toString());
+        } catch (IllegalArgumentException e) {
+            throw new ApiException(ApiErrorCode.UNAUTHORIZED);
+        }
     }
 
     public static Optional<UUID> getCurrentUserIdOptional() {
