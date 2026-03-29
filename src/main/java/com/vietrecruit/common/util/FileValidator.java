@@ -1,8 +1,11 @@
 package com.vietrecruit.common.util;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Set;
 
+import org.apache.tika.Tika;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,7 +15,8 @@ import com.vietrecruit.common.exception.ApiException;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Validates uploaded files using magic-byte signatures rather than trusting Content-Type headers.
+ * Validates uploaded files using magic-byte signatures and Apache Tika content detection rather than
+ * trusting Content-Type headers.
  */
 @Slf4j
 @Component
@@ -21,6 +25,13 @@ public class FileValidator {
     private static final long MAX_CV_SIZE = 5L * 1024 * 1024; // 5MB
     private static final long MAX_AVATAR_SIZE = 2L * 1024 * 1024; // 2MB
     private static final long MAX_BANNER_SIZE = 3L * 1024 * 1024; // 3MB
+    private static final Tika TIKA = new Tika();
+    private static final Set<String> ALLOWED_CV_MIMES =
+            Set.of(
+                    "application/pdf",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "image/jpeg",
+                    "image/png");
 
     // Magic bytes
     private static final byte[] PDF_MAGIC = {0x25, 0x50, 0x44, 0x46}; // %PDF
@@ -33,6 +44,12 @@ public class FileValidator {
         validateSize(file, MAX_CV_SIZE);
         byte[] header = readHeader(file, 12);
         if (!isPdf(header) && !isDocx(header) && !isJpeg(header) && !isPng(header)) {
+            throw new ApiException(ApiErrorCode.FILE_TYPE_NOT_ALLOWED);
+        }
+        // Secondary validation: Tika content-based MIME detection on the full stream
+        String detectedMime = detectMime(file);
+        if (!ALLOWED_CV_MIMES.contains(detectedMime)) {
+            log.warn("Tika MIME mismatch for CV upload: detected={}", detectedMime);
             throw new ApiException(ApiErrorCode.FILE_TYPE_NOT_ALLOWED);
         }
     }
@@ -96,6 +113,15 @@ public class FileValidator {
             if (header[8 + i] != WEBP_LABEL[i]) return false;
         }
         return true;
+    }
+
+    private String detectMime(MultipartFile file) {
+        try (InputStream is = new BufferedInputStream(file.getInputStream())) {
+            return TIKA.detect(is, file.getOriginalFilename());
+        } catch (IOException e) {
+            log.error("Tika MIME detection failed: {}", e.getMessage());
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "Failed to validate file type");
+        }
     }
 
     private boolean startsWith(byte[] data, byte[] prefix) {
