@@ -1,5 +1,6 @@
 package com.vietrecruit.feature.ai.knowledge.service.impl;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,17 +72,21 @@ public class KnowledgeIngestionServiceImpl implements KnowledgeIngestionService 
 
         validateFile(file);
 
-        String originalFilename = file.getOriginalFilename();
-        String fileKey = "knowledge/" + UUID.randomUUID() + "/" + originalFilename;
-
+        // Read file bytes eagerly so the stream is available after the transaction commits
+        final byte[] fileBytes;
         try {
-            storageService.upload(
-                    fileKey, file.getInputStream(), file.getContentType(), file.getSize());
+            fileBytes = file.getBytes();
         } catch (IOException e) {
             throw new ApiException(
-                    ApiErrorCode.STORAGE_UNAVAILABLE, "Failed to upload knowledge document");
+                    ApiErrorCode.STORAGE_UNAVAILABLE, "Failed to read uploaded file");
         }
 
+        String originalFilename = file.getOriginalFilename();
+        String fileKey = "knowledge/" + UUID.randomUUID() + "/" + originalFilename;
+        final String contentType = file.getContentType();
+        final long fileSize = file.getSize();
+
+        // DB save first — if this fails nothing is uploaded to R2
         KnowledgeDocument doc =
                 KnowledgeDocument.builder()
                         .title(title)
@@ -98,6 +103,20 @@ public class KnowledgeIngestionServiceImpl implements KnowledgeIngestionService 
                 new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
+                        try {
+                            storageService.upload(
+                                    fileKey,
+                                    new ByteArrayInputStream(fileBytes),
+                                    contentType,
+                                    fileSize);
+                        } catch (Exception e) {
+                            log.error(
+                                    "R2 upload failed after DB commit: docId={}, key={}, error={}",
+                                    docId,
+                                    fileKey,
+                                    e.getMessage());
+                            return;
+                        }
                         KnowledgeUploadedEvent event =
                                 new KnowledgeUploadedEvent(docId, fileKey, category, title);
                         kafkaTemplate.send(TOPIC_KNOWLEDGE_UPLOADED, docId.toString(), event);
@@ -105,7 +124,7 @@ public class KnowledgeIngestionServiceImpl implements KnowledgeIngestionService 
                 });
 
         log.info(
-                "Knowledge document uploaded: id={}, title={}, category={}",
+                "Knowledge document saved: id={}, title={}, category={}",
                 doc.getId(),
                 title,
                 category);
