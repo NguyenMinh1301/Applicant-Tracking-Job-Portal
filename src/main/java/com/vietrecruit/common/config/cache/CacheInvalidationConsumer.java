@@ -137,11 +137,13 @@ public class CacheInvalidationConsumer {
         cacheRedisTemplate.execute(
                 (RedisCallback<Void>)
                         connection -> {
-                            Cursor<byte[]> cursor = connection.keyCommands().scan(scanOptions);
-                            while (cursor.hasNext()) {
-                                keysToDelete.add(new String(cursor.next(), StandardCharsets.UTF_8));
+                            try (Cursor<byte[]> cursor =
+                                    connection.keyCommands().scan(scanOptions)) {
+                                while (cursor.hasNext()) {
+                                    keysToDelete.add(
+                                            new String(cursor.next(), StandardCharsets.UTF_8));
+                                }
                             }
-                            cursor.close();
                             return null;
                         });
 
