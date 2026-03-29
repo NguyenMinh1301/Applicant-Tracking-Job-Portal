@@ -1,9 +1,11 @@
 package com.vietrecruit.feature.payment.service.impl;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.payment.entity.PaymentTransaction;
 import com.vietrecruit.feature.subscription.service.SubscriptionService;
 
@@ -26,14 +28,24 @@ public class SubscriptionActivationService {
         try {
             subscriptionService.activateSubscription(
                     tx.getCompanyId(), tx.getPlan(), tx.getBillingCycle());
-        } catch (Exception e) {
+        } catch (DataIntegrityViolationException | ApiException | IllegalArgumentException e) {
+            // Permanent errors: constraint violation, business rule violation, bad input.
+            // No retry — log and move on.
             log.error(
-                    "Subscription activation failed for orderCode={}, company={}. "
+                    "Subscription activation permanently failed for orderCode={}, company={}: {}",
+                    tx.getOrderCode(),
+                    tx.getCompanyId(),
+                    e.getMessage());
+        } catch (Exception e) {
+            // Transient errors: DB timeout, connection failure, etc. Re-throw for retry.
+            log.error(
+                    "Subscription activation transiently failed for orderCode={}, company={}. "
                             + "Recovery job will retry. Error: {}",
                     tx.getOrderCode(),
                     tx.getCompanyId(),
                     e.getMessage(),
                     e);
+            throw e;
         }
     }
 
