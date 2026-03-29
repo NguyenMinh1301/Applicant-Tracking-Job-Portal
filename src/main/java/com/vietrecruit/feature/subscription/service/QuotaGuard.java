@@ -46,14 +46,14 @@ public class QuotaGuard {
     }
 
     /**
-     * Decrements active job count for the company's current quota. Call this when a job transitions
-     * to CLOSED or is deleted.
+     * Atomically decrements active job count for the company's current quota. Uses a single
+     * UPDATE statement to eliminate optimistic-locking race conditions when multiple jobs are
+     * closed concurrently. Call this when a job transitions to CLOSED or is deleted.
      */
+    @org.springframework.transaction.annotation.Transactional
     public void decrementActiveJobs(UUID companyId) {
         var subscription = getActiveSubscription(companyId);
-        var quota = getQuota(subscription);
-        quota.setJobsActive(Math.max(0, quota.getJobsActive() - 1));
-        quotaRepository.save(quota);
+        quotaRepository.atomicDecrementActiveJobs(subscription.getId());
     }
 
     private EmployerSubscription getActiveSubscription(UUID companyId) {
