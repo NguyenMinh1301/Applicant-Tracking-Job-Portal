@@ -22,6 +22,9 @@ public class AuthCacheService {
     private static final String OTP_COOLDOWN_PREFIX = "auth:verify:cooldown:";
     private static final String OTP_LOCKOUT_PREFIX = "auth:verify:lockout:";
     private static final String RESET_TOKEN_PREFIX = "auth:reset:";
+    private static final String RESET_RATE_PREFIX = "ratelimit:password-reset:";
+    private static final long RESET_RATE_TTL_SECONDS = 900; // 15 min
+    private static final int RESET_RATE_MAX = 3;
 
     private final StringRedisTemplate redisTemplate;
 
@@ -150,4 +153,19 @@ public class AuthCacheService {
     }
 
     public record ResetTokenContext(String tokenHash, UUID userId) {}
+
+    // ── Password Reset Rate Limiting ────────────────────────────────────
+
+    /**
+     * Increments the password reset request count for the given email and returns true if the limit
+     * has been exceeded.
+     */
+    public boolean isPasswordResetRateLimited(String email) {
+        String key = RESET_RATE_PREFIX + email.toLowerCase();
+        Long count = redisTemplate.opsForValue().increment(key);
+        if (count != null && count == 1) {
+            redisTemplate.expire(key, RESET_RATE_TTL_SECONDS, TimeUnit.SECONDS);
+        }
+        return count != null && count > RESET_RATE_MAX;
+    }
 }

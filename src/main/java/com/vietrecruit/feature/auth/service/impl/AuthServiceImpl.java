@@ -494,6 +494,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
+        if (authCacheService.isPasswordResetRateLimited(request.getEmail())) {
+            throw new ApiException(ApiErrorCode.TOO_MANY_REQUESTS);
+        }
+
         userRepository
                 .findByEmail(request.getEmail())
                 .ifPresent(
