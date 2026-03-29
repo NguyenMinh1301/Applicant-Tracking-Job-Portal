@@ -1,5 +1,6 @@
 package com.vietrecruit.feature.ai.knowledge.service.impl;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,17 +72,21 @@ public class KnowledgeIngestionServiceImpl implements KnowledgeIngestionService 
 
         validateFile(file);
 
-        String originalFilename = file.getOriginalFilename();
-        String fileKey = "knowledge/" + UUID.randomUUID() + "/" + originalFilename;
-
+        // Read file bytes eagerly so the stream is available after the transaction commits
+        final byte[] fileBytes;
         try {
-            storageService.upload(
-                    fileKey, file.getInputStream(), file.getContentType(), file.getSize());
+            fileBytes = file.getBytes();
         } catch (IOException e) {
             throw new ApiException(
-                    ApiErrorCode.STORAGE_UNAVAILABLE, "Failed to upload knowledge document");
+                    ApiErrorCode.STORAGE_UNAVAILABLE, "Failed to read uploaded file");
         }
 
+        String originalFilename = file.getOriginalFilename();
+        String fileKey = "knowledge/" + UUID.randomUUID() + "/" + originalFilename;
+        final String contentType = file.getContentType();
+        final long fileSize = file.getSize();
+
+        // DB save first — if this fails nothing is uploaded to R2
         KnowledgeDocument doc =
                 KnowledgeDocument.builder()
                         .title(title)
@@ -98,6 +103,20 @@ public class KnowledgeIngestionServiceImpl implements KnowledgeIngestionService 
                 new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
+                        try {
+                            storageService.upload(
+                                    fileKey,
+                                    new ByteArrayInputStream(fileBytes),
+                                    contentType,
+                                    fileSize);
+                        } catch (Exception e) {
+                            log.error(
+                                    "R2 upload failed after DB commit: docId={}, key={}, error={}",
+                                    docId,
+                                    fileKey,
+                                    e.getMessage());
+                            return;
+                        }
                         KnowledgeUploadedEvent event =
                                 new KnowledgeUploadedEvent(docId, fileKey, category, title);
                         kafkaTemplate.send(TOPIC_KNOWLEDGE_UPLOADED, docId.toString(), event);
@@ -105,7 +124,7 @@ public class KnowledgeIngestionServiceImpl implements KnowledgeIngestionService 
                 });
 
         log.info(
-                "Knowledge document uploaded: id={}, title={}, category={}",
+                "Knowledge document saved: id={}, title={}, category={}",
                 doc.getId(),
                 title,
                 category);
@@ -136,22 +155,43 @@ public class KnowledgeIngestionServiceImpl implements KnowledgeIngestionService 
                                                 ApiErrorCode.NOT_FOUND,
                                                 "Knowledge document not found"));
 
-        if (doc.getFileKey() != null) {
-            try {
-                storageService.delete(doc.getFileKey());
-            } catch (Exception e) {
-                log.warn(
-                        "Failed to delete R2 file for knowledge doc: id={}, key={}, error={}",
-                        documentId,
-                        doc.getFileKey(),
-                        e.getMessage());
-            }
-        }
+        final String fileKey = doc.getFileKey();
+        final String docTitle = doc.getTitle();
 
-        embeddingService.deleteByMetadata("knowledgeDocumentId", documentId.toString());
+        // 1. DB delete first (in transaction) — if this fails, nothing else is touched
         repository.delete(doc);
 
-        log.info("Knowledge document deleted: id={}, title={}", documentId, doc.getTitle());
+        // 2. pgvector and R2 cleanup after commit to avoid inconsistency on rollback
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            embeddingService.deleteByMetadata(
+                                    "knowledgeDocumentId", documentId.toString());
+                        } catch (Exception e) {
+                            log.warn(
+                                    "Failed to delete pgvector embeddings for knowledge doc:"
+                                            + " id={}, error={}",
+                                    documentId,
+                                    e.getMessage());
+                        }
+                        if (fileKey != null) {
+                            try {
+                                storageService.delete(fileKey);
+                            } catch (Exception e) {
+                                log.warn(
+                                        "Failed to delete R2 file for knowledge doc: id={},"
+                                                + " key={}, error={}",
+                                        documentId,
+                                        fileKey,
+                                        e.getMessage());
+                            }
+                        }
+                    }
+                });
+
+        log.info("Knowledge document deleted: id={}, title={}", documentId, docTitle);
     }
 
     @Override

@@ -20,6 +20,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -27,22 +29,22 @@ import io.jsonwebtoken.JwtException;
 /**
  * Unit tests for JwtAuthenticationFilter.
  *
- * <p>Note: This filter does NOT write 401 responses. On any JWT failure it simply continues the
- * filter chain without setting authentication. Spring Security's authorization layer is responsible
- * for producing 401/403 downstream. Tests verify mock interaction rather than response status.
+ * <p>On JWT parse/validation failure the filter writes a 401 JSON response directly and short-
+ * circuits the chain. For blacklisted tokens it continues the chain without setting authentication.
  */
 @ExtendWith(MockitoExtension.class)
 class JwtAuthenticationFilterTest {
 
     @Mock private JwtService jwtService;
     @Mock private AuthCacheService authCacheService;
+    @Mock private ObjectMapper objectMapper;
 
     private JwtAuthenticationFilter filter;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        filter = new JwtAuthenticationFilter(jwtService, authCacheService);
+        filter = new JwtAuthenticationFilter(jwtService, authCacheService, objectMapper);
         mockMvc = MockMvcBuilders.standaloneSetup(new DummyController()).addFilter(filter).build();
         SecurityContextHolder.clearContext();
     }
@@ -99,18 +101,18 @@ class JwtAuthenticationFilterTest {
     // ── Scenario 4 ─────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName(
-            "Expired token (ExpiredJwtException) → exception caught, chain continues without auth")
-    void expiredToken_exceptionCaught_chainContinuesWithoutAuth() throws Exception {
+    @DisplayName("Expired token (ExpiredJwtException) → filter writes 401, chain short-circuited")
+    void expiredToken_returns401WithoutCallingChain() throws Exception {
         String token = "expired.jwt.token";
         when(jwtService.parseAndValidate(token))
                 .thenThrow(new ExpiredJwtException(null, null, "Token expired"));
+        when(objectMapper.writeValueAsString(any())).thenReturn("{\"success\":false}");
 
         mockMvc.perform(get("/test").header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk());
+                .andExpect(status().isUnauthorized());
 
         verify(jwtService).parseAndValidate(token);
-        // blacklist and extractUserId must not be called after parse failure
+        verify(objectMapper).writeValueAsString(any());
         verifyNoInteractions(authCacheService);
         verify(jwtService, never()).extractUserId(any());
     }
@@ -118,15 +120,17 @@ class JwtAuthenticationFilterTest {
     // ── Scenario 5 ─────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("Tampered/invalid token (JwtException) → exception caught, chain continues")
-    void invalidToken_exceptionCaught_chainContinuesWithoutAuth() throws Exception {
+    @DisplayName("Tampered/invalid token (JwtException) → filter writes 401, chain short-circuited")
+    void invalidToken_returns401WithoutCallingChain() throws Exception {
         String token = "tampered.token";
         when(jwtService.parseAndValidate(token)).thenThrow(new JwtException("Invalid signature"));
+        when(objectMapper.writeValueAsString(any())).thenReturn("{\"success\":false}");
 
         mockMvc.perform(get("/test").header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk());
+                .andExpect(status().isUnauthorized());
 
         verify(jwtService).parseAndValidate(token);
+        verify(objectMapper).writeValueAsString(any());
         verifyNoInteractions(authCacheService);
     }
 

@@ -19,9 +19,11 @@ import com.vietrecruit.feature.application.dto.response.OfferResponse;
 import com.vietrecruit.feature.application.entity.Application;
 import com.vietrecruit.feature.application.entity.Offer;
 import com.vietrecruit.feature.application.enums.ApplicationStatus;
+import com.vietrecruit.feature.application.enums.InterviewStatus;
 import com.vietrecruit.feature.application.enums.OfferStatus;
 import com.vietrecruit.feature.application.mapper.OfferMapper;
 import com.vietrecruit.feature.application.repository.ApplicationRepository;
+import com.vietrecruit.feature.application.repository.InterviewRepository;
 import com.vietrecruit.feature.application.repository.OfferRepository;
 import com.vietrecruit.feature.application.service.ApplicationService;
 import com.vietrecruit.feature.application.service.OfferService;
@@ -42,6 +44,7 @@ public class OfferServiceImpl implements OfferService {
 
     private final OfferRepository offerRepository;
     private final ApplicationRepository applicationRepository;
+    private final InterviewRepository interviewRepository;
     private final ApplicationService applicationService;
     private final JobRepository jobRepository;
     private final CandidateRepository candidateRepository;
@@ -61,6 +64,14 @@ public class OfferServiceImpl implements OfferService {
 
         if (application.getStatus() != ApplicationStatus.OFFER) {
             throw new ApiException(ApiErrorCode.OFFER_APPLICATION_NOT_READY);
+        }
+
+        // Require at least one completed interview before an offer can be created
+        if (!interviewRepository.existsByApplicationIdAndStatusAndDeletedAtIsNull(
+                applicationId, InterviewStatus.COMPLETED)) {
+            throw new ApiException(
+                    ApiErrorCode.BAD_REQUEST,
+                    "Cannot create an offer: no completed interview exists for this application");
         }
 
         // Check for existing active offer

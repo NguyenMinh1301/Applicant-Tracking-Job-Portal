@@ -74,7 +74,17 @@ public class AgentService {
                     usage.getTotalTokens(),
                     durationMs);
 
-            String response = chatResponse.getResult().getOutput().getText();
+            String response = null;
+            if (chatResponse != null
+                    && chatResponse.getResult() != null
+                    && chatResponse.getResult().getOutput() != null) {
+                response = chatResponse.getResult().getOutput().getText();
+            }
+
+            if (response == null || response.isBlank()) {
+                log.warn("Agent returned null or empty response: sessionId={}", sessionId);
+                return "The AI assistant could not generate a response. Please try again.";
+            }
 
             memoryStore.append(userId, sessionId, "user", userMessage);
             memoryStore.append(userId, sessionId, "assistant", response);

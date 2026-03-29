@@ -11,6 +11,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,6 +19,10 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vietrecruit.common.enums.ApiErrorCode;
+import com.vietrecruit.common.response.ApiResponse;
 
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final AuthCacheService authCacheService;
+    private final ObjectMapper objectMapper;
 
     @Override
     protected void doFilterInternal(
@@ -76,6 +82,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             } catch (Exception e) {
                 log.debug("JWT authentication failed: {}", e.getMessage());
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                try {
+                    ApiResponse<Void> body =
+                            ApiResponse.failure(
+                                    ApiErrorCode.AUTH_TOKEN_INVALID,
+                                    ApiErrorCode.AUTH_TOKEN_INVALID.getDefaultMessage(),
+                                    null);
+                    response.getWriter().write(objectMapper.writeValueAsString(body));
+                } catch (IOException ioEx) {
+                    log.error("Failed to write 401 response: {}", ioEx.getMessage());
+                }
+                return;
             }
         }
 

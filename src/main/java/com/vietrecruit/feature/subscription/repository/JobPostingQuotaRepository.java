@@ -27,4 +27,14 @@ public interface JobPostingQuotaRepository extends JpaRepository<JobPostingQuota
     int atomicIncrementIfUnderLimit(
             @Param("subscriptionId") UUID subscriptionId,
             @Param("maxActiveJobs") int maxActiveJobs);
+
+    /**
+     * Atomically decrement active job count, clamping at zero. Returns 1 if the row was found and
+     * updated, 0 otherwise.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query(
+            "UPDATE JobPostingQuota q SET q.jobsActive = GREATEST(0, q.jobsActive - 1) "
+                    + "WHERE q.subscription.id = :subscriptionId")
+    int atomicDecrementActiveJobs(@Param("subscriptionId") UUID subscriptionId);
 }

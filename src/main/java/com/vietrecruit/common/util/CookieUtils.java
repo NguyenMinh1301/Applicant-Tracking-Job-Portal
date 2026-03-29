@@ -14,7 +14,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class CookieUtils {
 
@@ -81,7 +83,11 @@ public final class CookieUtils {
             byte[] bytes = Base64.getUrlDecoder().decode(cookie.getValue());
             return MAPPER.readValue(bytes, cls);
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to deserialize cookie value", e);
+            log.warn(
+                    "Corrupted cookie '{}' — deserialization failed, discarding: {}",
+                    cookie.getName(),
+                    e.getMessage());
+            return null;
         }
     }
 }

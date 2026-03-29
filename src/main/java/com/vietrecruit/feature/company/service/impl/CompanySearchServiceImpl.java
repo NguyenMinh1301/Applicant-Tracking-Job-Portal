@@ -64,6 +64,9 @@ public class CompanySearchServiceImpl implements CompanySearchService {
         } catch (IOException e) {
             log.error("Company search failed: {}", e.getMessage(), e);
             return emptyResponse(request.getPage(), request.getSize());
+        } catch (RuntimeException e) {
+            log.error("Company search failed (transport/runtime): {}", e.getMessage(), e);
+            return emptyResponse(request.getPage(), request.getSize());
         }
     }
 

@@ -53,11 +53,14 @@ public class EmbeddingService {
         throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE);
     }
 
+    private static final int MAX_TOP_K = 100;
+    private static final int DELETE_BATCH_SIZE = 100;
+
     public List<Document> search(String query, int topK, Filter.Expression filter) {
         SearchRequest request =
                 SearchRequest.builder()
                         .query(query)
-                        .topK(topK)
+                        .topK(Math.min(topK, MAX_TOP_K))
                         .filterExpression(filter)
                         .similarityThreshold(vectorStoreProperties.similarityThreshold())
                         .build();
@@ -68,7 +71,7 @@ public class EmbeddingService {
         SearchRequest request =
                 SearchRequest.builder()
                         .query(query)
-                        .topK(topK)
+                        .topK(Math.min(topK, MAX_TOP_K))
                         .similarityThreshold(vectorStoreProperties.similarityThreshold())
                         .build();
         return vectorStore.similaritySearch(request);
@@ -78,12 +81,18 @@ public class EmbeddingService {
         Filter.Expression filter =
                 new Filter.Expression(
                         Filter.ExpressionType.EQ, new Filter.Key(key), new Filter.Value(value));
-        List<Document> docs = search("", 100, filter);
-        if (!docs.isEmpty()) {
-            List<String> ids = docs.stream().map(Document::getId).toList();
+        int offset = 0;
+        int deleted = 0;
+        while (true) {
+            List<Document> batch = search("", DELETE_BATCH_SIZE, filter);
+            if (batch.isEmpty()) break;
+            List<String> ids = batch.stream().map(Document::getId).toList();
             vectorStore.delete(ids);
-            log.debug("Deleted {} documents matching {}={}", ids.size(), key, value);
+            deleted += ids.size();
+            offset += ids.size();
+            if (ids.size() < DELETE_BATCH_SIZE) break;
         }
+        log.debug("Deleted {} documents matching {}={}", deleted, key, value);
     }
 
     @CircuitBreaker(name = "openaiApi", fallbackMethod = "embedFallback")

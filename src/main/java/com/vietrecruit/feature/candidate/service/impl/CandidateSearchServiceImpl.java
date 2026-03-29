@@ -40,7 +40,8 @@ public class CandidateSearchServiceImpl implements CandidateSearchService {
     private final ElasticsearchClient esClient;
 
     private static final String RECENCY_SCRIPT =
-            "double ageD = (params.now - doc['updated_at'].value.toInstant().toEpochMilli())"
+            "if (!doc.containsKey('updated_at') || doc['updated_at'].empty) { return 0.5; }"
+                    + " double ageD = (params.now - doc['updated_at'].value.toInstant().toEpochMilli())"
                     + " / 86400000.0; return 1.0 / (1.0 + ageD * ageD / 900.0);";
 
     @Override
@@ -86,6 +87,9 @@ public class CandidateSearchServiceImpl implements CandidateSearchService {
             return mapToSearchPageResponse(response, request.getPage(), request.getSize());
         } catch (IOException e) {
             log.error("Candidate search failed: {}", e.getMessage(), e);
+            return emptyResponse(request.getPage(), request.getSize());
+        } catch (RuntimeException e) {
+            log.error("Candidate search failed (transport/runtime): {}", e.getMessage(), e);
             return emptyResponse(request.getPage(), request.getSize());
         }
     }

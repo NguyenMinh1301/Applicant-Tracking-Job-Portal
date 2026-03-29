@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.vietrecruit.common.ApiConstants;
+import com.vietrecruit.common.enums.ApiErrorCode;
+import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.payment.service.PaymentService;
 
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
@@ -32,8 +34,18 @@ public class PaymentWebhookController {
     public ResponseEntity<Void> handlePayOSWebhook(@RequestBody Object body) {
         try {
             paymentService.handleWebhook(body);
+        } catch (ApiException e) {
+            if (e.getErrorCode() == ApiErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE) {
+                // Invalid signature — return 200 so PayOS stops retrying; the request
+                // is intentionally rejected, not a transient infrastructure failure.
+                log.warn("Rejected webhook with invalid signature");
+                return ResponseEntity.ok().build();
+            }
+            // Any other ApiException is a genuine infra failure — return 500 so PayOS retries.
+            log.error("Business error processing PayOS webhook: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
         } catch (Exception e) {
-            // DB or infrastructure exception — return 500 so PayOS retries
+            // DB or infrastructure exception — return 500 so PayOS retries.
             log.error("Retryable error processing PayOS webhook: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }

@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.vietrecruit.feature.application.entity.Interview;
+import com.vietrecruit.feature.application.enums.InterviewStatus;
 
 @Repository
 public interface InterviewRepository extends JpaRepository<Interview, UUID> {
@@ -17,6 +18,9 @@ public interface InterviewRepository extends JpaRepository<Interview, UUID> {
     Optional<Interview> findByIdAndDeletedAtIsNull(UUID id);
 
     List<Interview> findByApplicationIdAndDeletedAtIsNull(UUID applicationId);
+
+    boolean existsByApplicationIdAndStatusAndDeletedAtIsNull(
+            UUID applicationId, InterviewStatus status);
 
     @Query(
             "SELECT i FROM Interview i JOIN i.interviewers u "

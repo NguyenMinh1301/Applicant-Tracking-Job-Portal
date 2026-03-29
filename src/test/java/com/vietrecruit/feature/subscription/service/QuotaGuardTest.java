@@ -152,17 +152,14 @@ class QuotaGuardTest {
     }
 
     @Test
-    @DisplayName("Should decrement active count with floor at zero")
-    void decrementActiveJobs_FloorAtZero() {
-        quota.setJobsActive(0);
+    @DisplayName("Should issue atomic SQL decrement (floor enforced in DB via GREATEST)")
+    void decrementActiveJobs_delegatesToAtomicSql() {
         when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
-        when(quotaRepository.findBySubscriptionId(subscription.getId()))
-                .thenReturn(Optional.of(quota));
 
         quotaGuard.decrementActiveJobs(companyId);
 
-        assertEquals(0, quota.getJobsActive());
-        verify(quotaRepository).save(quota);
+        verify(quotaRepository).atomicDecrementActiveJobs(subscription.getId());
+        verify(quotaRepository, never()).save(any());
     }
 }

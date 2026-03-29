@@ -11,7 +11,6 @@ import java.util.UUID;
 
 import jakarta.persistence.criteria.Predicate;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -293,50 +292,49 @@ public class CandidateServiceImpl implements CandidateService {
     @Override
     public List<CandidateSearchResult> searchCandidates(
             String skills, String desiredPosition, Short minYearsExperience, int limit) {
-        Specification<Candidate> spec =
-                (root, query, cb) -> {
-                    List<Predicate> predicates = new ArrayList<>();
-                    predicates.add(cb.isNull(root.get("deletedAt")));
-                    predicates.add(cb.equal(root.get("isOpenToWork"), true));
-
-                    if (desiredPosition != null && !desiredPosition.isBlank()) {
-                        predicates.add(
-                                cb.like(
-                                        cb.lower(root.get("desiredPosition")),
-                                        "%" + desiredPosition.toLowerCase() + "%"));
-                    }
-                    if (minYearsExperience != null) {
-                        predicates.add(
-                                cb.greaterThanOrEqualTo(
-                                        root.get("yearsOfExperience"), minYearsExperience));
-                    }
-
-                    return cb.and(predicates.toArray(new Predicate[0]));
-                };
-
-        Page<Candidate> page = candidateRepository.findAll(spec, PageRequest.of(0, limit));
-        var stream = page.getContent().stream();
+        List<Candidate> candidates;
 
         if (skills != null && !skills.isBlank()) {
-            String[] requiredSkills =
+            // Push skill filter to DB to avoid post-pagination under-return
+            List<String> requiredSkills =
                     Arrays.stream(skills.split(","))
                             .map(String::trim)
                             .map(String::toLowerCase)
-                            .toArray(String[]::new);
-            stream =
-                    stream.filter(
-                            c -> {
-                                if (c.getSkills() == null) return false;
-                                List<String> candidateSkills =
-                                        Arrays.stream(c.getSkills())
-                                                .map(String::toLowerCase)
-                                                .toList();
-                                return Arrays.stream(requiredSkills)
-                                        .anyMatch(candidateSkills::contains);
-                            });
+                            .filter(s -> !s.isEmpty())
+                            .toList();
+            String positionPattern =
+                    (desiredPosition != null && !desiredPosition.isBlank())
+                            ? "%" + desiredPosition.toLowerCase() + "%"
+                            : null;
+            candidates =
+                    candidateRepository.findBySkillsFilter(
+                            positionPattern, minYearsExperience, requiredSkills, limit);
+        } else {
+            Specification<Candidate> spec =
+                    (root, query, cb) -> {
+                        List<Predicate> predicates = new ArrayList<>();
+                        predicates.add(cb.isNull(root.get("deletedAt")));
+                        predicates.add(cb.equal(root.get("isOpenToWork"), true));
+
+                        if (desiredPosition != null && !desiredPosition.isBlank()) {
+                            predicates.add(
+                                    cb.like(
+                                            cb.lower(root.get("desiredPosition")),
+                                            "%" + desiredPosition.toLowerCase() + "%"));
+                        }
+                        if (minYearsExperience != null) {
+                            predicates.add(
+                                    cb.greaterThanOrEqualTo(
+                                            root.get("yearsOfExperience"), minYearsExperience));
+                        }
+
+                        return cb.and(predicates.toArray(new Predicate[0]));
+                    };
+            candidates = candidateRepository.findAll(spec, PageRequest.of(0, limit)).getContent();
         }
 
-        return stream.map(
+        return candidates.stream()
+                .map(
                         c ->
                                 new CandidateSearchResult(
                                         c.getId(),
@@ -358,50 +356,53 @@ public class CandidateServiceImpl implements CandidateService {
             return List.of();
         }
 
-        Specification<Candidate> spec =
-                (root, query, cb) -> {
-                    List<Predicate> predicates = new ArrayList<>();
-                    predicates.add(cb.isNull(root.get("deletedAt")));
-                    predicates.add(root.get("id").in(applicantIds));
-
-                    if (desiredPosition != null && !desiredPosition.isBlank()) {
-                        predicates.add(
-                                cb.like(
-                                        cb.lower(root.get("desiredPosition")),
-                                        "%" + desiredPosition.toLowerCase() + "%"));
-                    }
-                    if (minYearsExperience != null) {
-                        predicates.add(
-                                cb.greaterThanOrEqualTo(
-                                        root.get("yearsOfExperience"), minYearsExperience));
-                    }
-
-                    return cb.and(predicates.toArray(new Predicate[0]));
-                };
-
-        Page<Candidate> page = candidateRepository.findAll(spec, PageRequest.of(0, limit));
-        var stream = page.getContent().stream();
+        List<Candidate> candidates;
 
         if (skills != null && !skills.isBlank()) {
-            String[] requiredSkills =
+            // Push skill filter to DB to avoid post-pagination under-return
+            List<String> requiredSkills =
                     Arrays.stream(skills.split(","))
                             .map(String::trim)
                             .map(String::toLowerCase)
-                            .toArray(String[]::new);
-            stream =
-                    stream.filter(
-                            c -> {
-                                if (c.getSkills() == null) return false;
-                                List<String> candidateSkills =
-                                        Arrays.stream(c.getSkills())
-                                                .map(String::toLowerCase)
-                                                .toList();
-                                return Arrays.stream(requiredSkills)
-                                        .anyMatch(candidateSkills::contains);
-                            });
+                            .filter(s -> !s.isEmpty())
+                            .toList();
+            String positionPattern =
+                    (desiredPosition != null && !desiredPosition.isBlank())
+                            ? "%" + desiredPosition.toLowerCase() + "%"
+                            : null;
+            candidates =
+                    candidateRepository.findBySkillsFilterForCompany(
+                            positionPattern,
+                            minYearsExperience,
+                            requiredSkills,
+                            applicantIds,
+                            limit);
+        } else {
+            Specification<Candidate> spec =
+                    (root, query, cb) -> {
+                        List<Predicate> predicates = new ArrayList<>();
+                        predicates.add(cb.isNull(root.get("deletedAt")));
+                        predicates.add(root.get("id").in(applicantIds));
+
+                        if (desiredPosition != null && !desiredPosition.isBlank()) {
+                            predicates.add(
+                                    cb.like(
+                                            cb.lower(root.get("desiredPosition")),
+                                            "%" + desiredPosition.toLowerCase() + "%"));
+                        }
+                        if (minYearsExperience != null) {
+                            predicates.add(
+                                    cb.greaterThanOrEqualTo(
+                                            root.get("yearsOfExperience"), minYearsExperience));
+                        }
+
+                        return cb.and(predicates.toArray(new Predicate[0]));
+                    };
+            candidates = candidateRepository.findAll(spec, PageRequest.of(0, limit)).getContent();
         }
 
-        return stream.map(
+        return candidates.stream()
+                .map(
                         c ->
                                 new CandidateSearchResult(
                                         c.getId(),

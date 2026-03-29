@@ -1,10 +1,10 @@
 package com.vietrecruit.feature.payment.service.impl;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -31,6 +31,7 @@ import com.vietrecruit.feature.subscription.repository.SubscriptionPlanRepositor
 import com.vietrecruit.feature.subscription.service.SubscriptionService;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +47,7 @@ import vn.payos.model.webhooks.WebhookData;
 public class PaymentServiceImpl implements PaymentService {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final PayOS payOS;
     private final PayOSConfig payOSConfig;
@@ -89,6 +91,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
+    @Retry(name = "payosPayment", fallbackMethod = "checkoutFallback")
     @CircuitBreaker(name = "payosPayment", fallbackMethod = "checkoutFallback")
     public CheckoutResponse initiateCheckout(UUID companyId, UUID planId, BillingCycle cycle) {
         var plan =
@@ -132,12 +135,13 @@ public class PaymentServiceImpl implements PaymentService {
                                     companyId);
                         });
 
-        // Generate unique order code using timestamp to avoid PayOS duplicates after
-        // local DB reset
+        // Generate unique order code: 13-digit epoch ms + 6-digit cryptographic random suffix.
+        // SecureRandom provides 20 bits of entropy per code (1_000_000 possibilities per ms),
+        // eliminating the 2-digit ThreadLocalRandom window that allowed collision under load.
         Long orderCode =
                 Long.parseLong(
                         System.currentTimeMillis()
-                                + String.valueOf(ThreadLocalRandom.current().nextInt(10, 100)));
+                                + String.format("%06d", SECURE_RANDOM.nextInt(1_000_000)));
 
         // Build PayOS payment link request
         String description = "VietRecruit " + plan.getName() + " - " + cycle.name();
@@ -147,6 +151,22 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         try {
+            // Persist the transaction BEFORE calling PayOS.
+            // If DB write fails the PayOS API is never called, preventing orphaned payment links.
+            // If PayOS call fails, @Transactional rolls back the DB record automatically.
+            PaymentTransaction transaction =
+                    PaymentTransaction.builder()
+                            .orderCode(orderCode)
+                            .companyId(companyId)
+                            .plan(plan)
+                            .billingCycle(cycle)
+                            .amount(amount)
+                            .status(PaymentStatus.PENDING)
+                            .payosReference(String.valueOf(orderCode))
+                            .build();
+
+            paymentTransactionRepository.saveAndFlush(transaction);
+
             PaymentLinkItem item =
                     PaymentLinkItem.builder()
                             .name(plan.getName())
@@ -166,19 +186,8 @@ public class PaymentServiceImpl implements PaymentService {
 
             CreatePaymentLinkResponse response = payOS.paymentRequests().create(paymentRequest);
 
-            PaymentTransaction transaction =
-                    PaymentTransaction.builder()
-                            .orderCode(orderCode)
-                            .companyId(companyId)
-                            .plan(plan)
-                            .billingCycle(cycle)
-                            .amount(amount)
-                            .status(PaymentStatus.PENDING)
-                            .checkoutUrl(response.getCheckoutUrl())
-                            .payosReference(String.valueOf(orderCode))
-                            .build();
-
-            paymentTransactionRepository.save(transaction);
+            // Update the persisted record with the PayOS checkout URL
+            transaction.setCheckoutUrl(response.getCheckoutUrl());
 
             return paymentMapper.toCheckoutResponse(transaction);
 

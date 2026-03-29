@@ -19,6 +19,8 @@ import com.vietrecruit.feature.job.service.JobSearchService;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.SortOptions;
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.FieldValueFactorModifier;
 import co.elastic.clients.elasticsearch._types.query_dsl.FunctionBoostMode;
@@ -52,11 +54,14 @@ public class JobSearchServiceImpl implements JobSearchService {
         try {
             var query = buildFunctionScoreQuery(request);
 
+            List<SortOptions> sortOptions = buildSortOptions(request.getSort());
+
             SearchResponse<JobDocument> response =
                     esClient.search(
                             s ->
                                     s.index(INDEX_JOBS)
                                             .query(query)
+                                            .sort(sortOptions)
                                             .highlight(
                                                     h ->
                                                             h.fields(
@@ -89,6 +94,9 @@ public class JobSearchServiceImpl implements JobSearchService {
             return mapToSearchPageResponse(response, request.getPage(), request.getSize());
         } catch (IOException e) {
             log.error("Job search failed: {}", e.getMessage(), e);
+            return emptyResponse(request.getPage(), request.getSize());
+        } catch (RuntimeException e) {
+            log.error("Job search failed (transport/runtime): {}", e.getMessage(), e);
             return emptyResponse(request.getPage(), request.getSize());
         }
     }
@@ -343,6 +351,49 @@ public class JobSearchServiceImpl implements JobSearchService {
                 .highlights(highlights.isEmpty() ? null : highlights)
                 .score(hit.score())
                 .build();
+    }
+
+    private List<SortOptions> buildSortOptions(String sort) {
+        if (sort == null || sort.isBlank() || "relevance".equalsIgnoreCase(sort)) {
+            return List.of(); // use score-based ordering from function_score query
+        }
+        return switch (sort.toLowerCase()) {
+            case "newest" ->
+                    List.of(
+                            SortOptions.of(
+                                    s ->
+                                            s.field(
+                                                    f ->
+                                                            f.field("published_at")
+                                                                    .order(SortOrder.Desc))));
+            case "oldest" ->
+                    List.of(
+                            SortOptions.of(
+                                    s ->
+                                            s.field(
+                                                    f ->
+                                                            f.field("published_at")
+                                                                    .order(SortOrder.Asc))));
+            case "salary_desc" ->
+                    List.of(
+                            SortOptions.of(
+                                    s ->
+                                            s.field(
+                                                    f ->
+                                                            f.field("max_salary")
+                                                                    .order(SortOrder.Desc)
+                                                                    .missing("_last"))));
+            case "salary_asc" ->
+                    List.of(
+                            SortOptions.of(
+                                    s ->
+                                            s.field(
+                                                    f ->
+                                                            f.field("min_salary")
+                                                                    .order(SortOrder.Asc)
+                                                                    .missing("_last"))));
+            default -> List.of();
+        };
     }
 
     private SearchPageResponse<JobSearchResponse> searchFallback(

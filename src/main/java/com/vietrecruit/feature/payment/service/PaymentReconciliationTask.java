@@ -11,6 +11,7 @@ import com.vietrecruit.feature.payment.enums.PaymentStatus;
 import com.vietrecruit.feature.payment.repository.PaymentTransactionRepository;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import vn.payos.PayOS;
@@ -34,6 +35,7 @@ public class PaymentReconciliationTask {
 
     @Scheduled(fixedRate = 600_000) // 10 minutes
     @Transactional
+    @Retry(name = "payosPayment", fallbackMethod = "reconciliationFallback")
     @CircuitBreaker(name = "payosPayment", fallbackMethod = "reconciliationFallback")
     public void reconcilePendingPayments() {
         var cutoff = Instant.now().minus(STALE_MINUTES, ChronoUnit.MINUTES);

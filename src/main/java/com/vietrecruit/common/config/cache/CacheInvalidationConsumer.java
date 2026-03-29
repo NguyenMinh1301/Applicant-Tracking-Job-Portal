@@ -11,6 +11,8 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 
 import com.vietrecruit.common.config.kafka.KafkaTopicNames;
@@ -36,6 +38,10 @@ public class CacheInvalidationConsumer {
     private final CacheManager cacheManager;
     private final RedisTemplate<String, String> cacheRedisTemplate;
 
+    @RetryableTopic(
+            attempts = "4",
+            backoff = @Backoff(delay = 2000, multiplier = 2),
+            dltTopicSuffix = "-dlq")
     @KafkaListener(
             topics = KafkaTopicNames.CACHE_INVALIDATION,
             groupId = "cache-invalidation-group")

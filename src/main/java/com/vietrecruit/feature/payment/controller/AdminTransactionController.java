@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.vietrecruit.common.ApiConstants;
+import com.vietrecruit.common.base.BaseController;
 import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.response.ApiResponse;
 import com.vietrecruit.feature.payment.dto.response.TransactionHistoryResponse;
@@ -33,7 +34,7 @@ import lombok.RequiredArgsConstructor;
 @Tag(
         name = "Admin Transaction History",
         description = "Admin/Customer Service endpoints for viewing all transaction records")
-public class AdminTransactionController {
+public class AdminTransactionController extends BaseController {
 
     private final TransactionHistoryService transactionHistoryService;
 
