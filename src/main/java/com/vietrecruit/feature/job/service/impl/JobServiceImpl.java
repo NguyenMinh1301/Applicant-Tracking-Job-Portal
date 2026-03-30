@@ -28,6 +28,7 @@ import com.vietrecruit.feature.job.mapper.JobMapper;
 import com.vietrecruit.feature.job.repository.JobRepository;
 import com.vietrecruit.feature.job.repository.JobSpecification;
 import com.vietrecruit.feature.job.service.JobService;
+import com.vietrecruit.feature.department.repository.DepartmentRepository;
 import com.vietrecruit.feature.subscription.service.QuotaGuard;
 
 import lombok.RequiredArgsConstructor;
@@ -44,10 +45,22 @@ public class JobServiceImpl implements JobService {
     private final QuotaGuard quotaGuard;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final CacheEventPublisher cacheEventPublisher;
+    private final DepartmentRepository departmentRepository;
 
     @Override
     @Transactional
     public Job createJob(UUID companyId, UUID createdBy, JobCreateRequest request) {
+        if (request.getDepartmentId() != null) {
+            departmentRepository
+                    .findByIdAndCompanyIdAndDeletedAtIsNull(
+                            request.getDepartmentId(), companyId)
+                    .orElseThrow(
+                            () ->
+                                    new ApiException(
+                                            ApiErrorCode.DEPARTMENT_NOT_FOUND,
+                                            "Department not found or does not belong to your company"));
+        }
+
         var job = jobMapper.toEntity(request);
         job.setCompanyId(companyId);
         job.setCreatedBy(createdBy);
