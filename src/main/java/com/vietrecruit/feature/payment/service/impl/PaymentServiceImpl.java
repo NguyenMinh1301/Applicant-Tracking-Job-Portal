@@ -122,18 +122,18 @@ public class PaymentServiceImpl implements PaymentService {
             return CheckoutResponse.builder().checkoutUrl(null).orderCode(null).build();
         }
 
-        // Cancel any existing pending payment for this company
-        paymentTransactionRepository
-                .findByCompanyIdAndStatus(companyId, PaymentStatus.PENDING)
-                .ifPresent(
-                        existing -> {
-                            existing.setStatus(PaymentStatus.CANCELLED);
-                            paymentTransactionRepository.save(existing);
-                            log.info(
-                                    "Cancelled existing pending payment orderCode={} for company={}",
-                                    existing.getOrderCode(),
-                                    companyId);
-                        });
+        // Cancel any existing pending payments for this company
+        var pendingPayments =
+                paymentTransactionRepository.findByCompanyIdAndStatus(
+                        companyId, PaymentStatus.PENDING);
+        for (var existing : pendingPayments) {
+            existing.setStatus(PaymentStatus.CANCELLED);
+            paymentTransactionRepository.save(existing);
+            log.info(
+                    "Cancelled existing pending payment orderCode={} for company={}",
+                    existing.getOrderCode(),
+                    companyId);
+        }
 
         // Generate unique order code: 13-digit epoch ms + 6-digit cryptographic random suffix.
         // SecureRandom provides 20 bits of entropy per code (1_000_000 possibilities per ms),
