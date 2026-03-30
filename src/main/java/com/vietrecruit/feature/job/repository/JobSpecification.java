@@ -21,14 +21,17 @@ public final class JobSpecification {
     }
 
     public static Specification<Job> hasCategoryId(UUID categoryId) {
+        if (categoryId == null) return Specification.where(null);
         return (root, query, cb) -> cb.equal(root.get("categoryId"), categoryId);
     }
 
     public static Specification<Job> hasLocationId(UUID locationId) {
+        if (locationId == null) return Specification.where(null);
         return (root, query, cb) -> cb.equal(root.get("locationId"), locationId);
     }
 
     public static Specification<Job> titleContains(String keyword) {
+        if (keyword == null || keyword.isBlank()) return Specification.where(null);
         return (root, query, cb) -> {
             String escaped = escapeLikePattern(keyword.toLowerCase());
             return cb.like(cb.lower(root.get("title")), "%" + escaped + "%", '\\');
