@@ -97,7 +97,8 @@ public class EmbeddingService {
 
     @CircuitBreaker(name = "openaiApi", fallbackMethod = "embedFallback")
     public float[] embed(String text) {
-        String hash = sha256(text);
+        String normalized = normalizeForCacheKey(text);
+        String hash = sha256(normalized);
         String cacheKey = CACHE_KEY_PREFIX + hash;
 
         String cached = redisTemplate.opsForValue().get(cacheKey);
@@ -116,6 +117,10 @@ public class EmbeddingService {
     private float[] embedFallback(String text, Throwable t) {
         log.warn("Embedding circuit open. cause={}", t.getMessage());
         throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE);
+    }
+
+    private static String normalizeForCacheKey(String text) {
+        return text.strip().replaceAll("\\s+", " ");
     }
 
     private static String sha256(String text) {
