@@ -81,7 +81,7 @@ public class CompanySearchServiceImpl implements CompanySearchService {
                                                 m.multiMatch(
                                                         mm ->
                                                                 mm.query(q)
-                                                                        .fields("name^3", "domain")
+                                                                        .fields("name^3")
                                                                         .type(
                                                                                 TextQueryType
                                                                                         .BestFields)
@@ -94,6 +94,13 @@ public class CompanySearchServiceImpl implements CompanySearchService {
                                                                 t.field("name.keyword")
                                                                         .value(q)
                                                                         .boost(5.0f)));
+                                b.should(
+                                        sh ->
+                                                sh.term(
+                                                        t ->
+                                                                t.field("domain")
+                                                                        .value(q.toLowerCase())
+                                                                        .boost(2.0f)));
                             } else {
                                 b.must(m -> m.matchAll(ma -> ma));
                             }
