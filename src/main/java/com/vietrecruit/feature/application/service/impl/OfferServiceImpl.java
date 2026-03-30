@@ -270,7 +270,16 @@ public class OfferServiceImpl implements OfferService {
                 userId,
                 isAccept ? "Offer accepted" : "Offer declined");
 
-        sendOfferRespondedNotification(offer, application, candidate, isAccept);
+        final Offer respondedOffer = offer;
+        final Application app = application;
+        final var cand = candidate;
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        sendOfferRespondedNotification(respondedOffer, app, cand, isAccept);
+                    }
+                });
 
         return offerMapper.toResponse(offer);
     }
