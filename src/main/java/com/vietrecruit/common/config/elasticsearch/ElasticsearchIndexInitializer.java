@@ -95,7 +95,8 @@ public class ElasticsearchIndexInitializer {
 
             log.info("ES index [{}] created successfully", indexName);
         } catch (IOException e) {
-            log.error("Failed to create ES index [{}]: {}", indexName, e.getMessage(), e);
+            throw new IllegalStateException(
+                    "Failed to create ES index [" + indexName + "]: " + e.getMessage(), e);
         }
     }
 
