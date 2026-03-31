@@ -580,6 +580,11 @@ class AuthServiceImplTest {
 
         authService.resetPassword(request);
 
+        // afterCommit callbacks are registered but not fired without a real transaction.
+        // Manually invoke them to simulate post-commit behaviour.
+        TransactionSynchronizationManager.getSynchronizations()
+                .forEach(TransactionSynchronization::afterCommit);
+
         assertEquals("hashed-new-pwd", testUser.getPasswordHash());
         verify(userRepository, times(1)).save(testUser);
         verify(authCacheService, times(1)).deleteResetToken("test@example.com");

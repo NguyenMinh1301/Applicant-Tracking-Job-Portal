@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
@@ -59,6 +61,7 @@ class OfferServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        TransactionSynchronizationManager.initSynchronization();
         offerId = UUID.randomUUID();
         userId = UUID.randomUUID();
         applicationId = UUID.randomUUID();
@@ -84,6 +87,11 @@ class OfferServiceImplTest {
         candidate = Candidate.builder().id(candidateId).userId(userId).build();
     }
 
+    @AfterEach
+    void tearDown() {
+        TransactionSynchronizationManager.clear();
+    }
+
     // ── Scenario 1 ─────────────────────────────────────────────────────────
 
     @Test
@@ -102,8 +110,6 @@ class OfferServiceImplTest {
         when(applicationRepository.save(any(Application.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
         when(offerMapper.toResponse(any(Offer.class))).thenReturn(expectedResponse);
-        // suppress notification side effects
-        when(jobRepository.findById(application.getJobId())).thenReturn(Optional.empty());
 
         var result = offerService.respondToOffer(offerId, userId, request);
 
@@ -131,7 +137,6 @@ class OfferServiceImplTest {
         when(applicationRepository.save(any(Application.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
         when(offerMapper.toResponse(any(Offer.class))).thenReturn(mock(OfferResponse.class));
-        when(jobRepository.findById(application.getJobId())).thenReturn(Optional.empty());
 
         offerService.respondToOffer(offerId, userId, request);
 
