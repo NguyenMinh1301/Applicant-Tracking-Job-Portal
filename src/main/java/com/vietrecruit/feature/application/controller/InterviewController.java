@@ -56,14 +56,29 @@ public class InterviewController extends BaseController {
 
     @Operation(
             summary = "List Interviews",
-            description = "HR lists all interviews for an application")
+            description =
+                    "HR lists all interviews for an application; CANDIDATE can view own application's interviews")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
-    @PreAuthorize("hasAnyAuthority('ROLE_HR', 'ROLE_COMPANY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_HR', 'ROLE_COMPANY_ADMIN', 'ROLE_CANDIDATE')")
     @GetMapping(ApiConstants.Application.ROOT + ApiConstants.Application.INTERVIEWS)
     public ResponseEntity<ApiResponse<List<InterviewResponse>>> listInterviews(
             @PathVariable UUID id) {
-        var companyId = resolveCompanyId();
+        UUID companyId =
+                SecurityUtils.getCurrentRoles().contains("CANDIDATE") ? null : resolveCompanyId();
         var response = interviewService.listInterviews(id, companyId);
+        return ResponseEntity.ok(
+                ApiResponse.success(ApiSuccessCode.INTERVIEW_LIST_SUCCESS, response));
+    }
+
+    @Operation(
+            summary = "My Interviews",
+            description = "Interviewer lists their own assigned interviews")
+    @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    @GetMapping(ApiConstants.Interview.ROOT + "/mine")
+    public ResponseEntity<ApiResponse<List<InterviewResponse>>> getMyInterviews() {
+        var userId = SecurityUtils.getCurrentUserId();
+        var response = interviewService.getInterviewsByInterviewer(userId);
         return ResponseEntity.ok(
                 ApiResponse.success(ApiSuccessCode.INTERVIEW_LIST_SUCCESS, response));
     }

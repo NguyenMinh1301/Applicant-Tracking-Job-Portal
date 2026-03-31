@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.enums.EmailSenderAlias;
 import com.vietrecruit.common.exception.ApiException;
+import com.vietrecruit.common.security.SecurityUtils;
 import com.vietrecruit.feature.application.dto.request.InterviewCreateRequest;
 import com.vietrecruit.feature.application.dto.request.InterviewStatusUpdateRequest;
 import com.vietrecruit.feature.application.dto.response.InterviewResponse;
@@ -120,11 +121,34 @@ public class InterviewServiceImpl implements InterviewService {
 
     @Override
     public List<InterviewResponse> listInterviews(UUID applicationId, UUID companyId) {
-        applicationRepository
-                .findByIdAndCompanyId(applicationId, companyId)
-                .orElseThrow(() -> new ApiException(ApiErrorCode.APPLICATION_NOT_FOUND));
+        if (SecurityUtils.getCurrentRoles().contains("CANDIDATE")) {
+            UUID currentUserId = SecurityUtils.getCurrentUserId();
+            var application =
+                    applicationRepository
+                            .findByIdAndDeletedAtIsNull(applicationId)
+                            .orElseThrow(
+                                    () -> new ApiException(ApiErrorCode.APPLICATION_NOT_FOUND));
+            var candidate =
+                    candidateRepository
+                            .findByUserIdAndDeletedAtIsNull(currentUserId)
+                            .orElseThrow(() -> new ApiException(ApiErrorCode.FORBIDDEN));
+            if (!candidate.getId().equals(application.getCandidateId())) {
+                throw new ApiException(ApiErrorCode.FORBIDDEN);
+            }
+        } else {
+            applicationRepository
+                    .findByIdAndCompanyId(applicationId, companyId)
+                    .orElseThrow(() -> new ApiException(ApiErrorCode.APPLICATION_NOT_FOUND));
+        }
 
         return interviewRepository.findByApplicationIdAndDeletedAtIsNull(applicationId).stream()
+                .map(interviewMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public List<InterviewResponse> getInterviewsByInterviewer(UUID userId) {
+        return interviewRepository.findByInterviewerUserId(userId).stream()
                 .map(interviewMapper::toResponse)
                 .toList();
     }
