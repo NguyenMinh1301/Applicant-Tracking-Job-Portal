@@ -30,6 +30,7 @@ public interface InterviewRepository extends JpaRepository<Interview, UUID> {
 
     @Query(
             "SELECT i FROM Interview i JOIN i.interviewers u "
-                    + "WHERE u.id = :userId AND i.deletedAt IS NULL")
+                    + "WHERE u.id = :userId AND i.deletedAt IS NULL "
+                    + "ORDER BY i.scheduledAt DESC")
     List<Interview> findByInterviewerUserId(@Param("userId") UUID userId);
 }

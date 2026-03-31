@@ -18,4 +18,6 @@ public interface InterviewService {
 
     InterviewResponse updateInterviewStatus(
             UUID interviewId, UUID companyId, UUID userId, InterviewStatusUpdateRequest request);
+
+    List<InterviewResponse> getInterviewsByInterviewer(UUID userId);
 }
