@@ -28,6 +28,7 @@ public class AiIngestionConsumer {
                     GetObjectRequest.builder().bucket(bucket).key(cvFileKey).build();
             var response = s3Client.getObject(request);
 
+            // Tika auto-detects document type from magic bytes; primarily handles PDF CVs
             org.springframework.ai.reader.tika.TikaDocumentReader reader =
                     new org.springframework.ai.reader.tika.TikaDocumentReader(
                             new InputStreamResource(response));

@@ -99,6 +99,7 @@ public class EmbeddingService {
     public float[] embed(String text) {
         String normalized = normalizeForCacheKey(text);
         String hash = sha256(normalized);
+        // Cache key scheme: ai:emb:{sha256(normalized text)} — TTL 24 hr
         String cacheKey = CACHE_KEY_PREFIX + hash;
 
         String cached = redisTemplate.opsForValue().get(cacheKey);
