@@ -24,6 +24,14 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
 
     List<PaymentTransaction> findByCompanyIdAndStatus(UUID companyId, PaymentStatus status);
 
+    /**
+     * Returns all payment transactions in the given status created before the cutoff, used to
+     * expire stale pending orders.
+     *
+     * @param cutoff the timestamp threshold; transactions created before this are returned
+     * @param status the payment status to filter by
+     * @return list of matching payment transactions
+     */
     @Query(
             """
 			SELECT pt FROM PaymentTransaction pt
@@ -33,6 +41,15 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
     List<PaymentTransaction> findExpiredPending(
             @Param("cutoff") Instant cutoff, @Param("status") PaymentStatus status);
 
+    /**
+     * Returns payment transactions in the given status created within the window {@code
+     * (lowerBound, cutoff)}, used by the reconciliation task to re-query PayOS.
+     *
+     * @param cutoff upper bound; transactions created before this are included
+     * @param lowerBound lower bound; transactions created after this are included
+     * @param status the payment status to filter by
+     * @return list of matching payment transactions
+     */
     @Query(
             """
 			SELECT pt FROM PaymentTransaction pt
@@ -45,6 +62,13 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
             @Param("lowerBound") Instant lowerBound,
             @Param("status") PaymentStatus status);
 
+    /**
+     * Returns PAID transactions updated after the cutoff whose company has no active subscription,
+     * used by the activation recovery task to detect missed webhook activations.
+     *
+     * @param cutoff only transactions updated after this timestamp are returned
+     * @return list of paid transactions without a corresponding active subscription
+     */
     @Query(
             value =
                     """
