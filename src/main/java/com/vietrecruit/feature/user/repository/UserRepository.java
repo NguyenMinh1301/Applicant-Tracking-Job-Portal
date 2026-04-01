@@ -17,6 +17,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByEmail(String email);
 
+    /**
+     * Returns a user by ID with roles and permissions eagerly loaded via JOIN FETCH, avoiding N+1
+     * queries during JWT authentication.
+     *
+     * @param id the user's UUID
+     * @return Optional containing the fully-loaded user, or empty if not found
+     */
     @Query(
             "SELECT DISTINCT u FROM User u "
                     + "LEFT JOIN FETCH u.roles r "
@@ -24,6 +31,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
                     + "WHERE u.id = :id")
     Optional<User> findByIdWithRolesAndPermissions(@Param("id") UUID id);
 
+    /**
+     * Returns the email-verified flag for the given user without loading the full entity.
+     *
+     * @param id the user's UUID
+     * @return {@code true} if the email is verified, {@code false} or null if not found
+     */
     @Query("SELECT u.emailVerified FROM User u WHERE u.id = :id")
     Boolean findEmailVerifiedById(@Param("id") UUID id);
 }
