@@ -56,8 +56,6 @@ public class JobController extends BaseController {
     private final JobSearchService jobSearchService;
     private final JobMapper jobMapper;
 
-    // ── Authenticated (Employer / HR) endpoints ──────────────────────────
-
     @Operation(summary = "Create Job", description = "Creates a new job in DRAFT status")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
     @PostMapping
@@ -150,8 +148,6 @@ public class JobController extends BaseController {
                         ApiSuccessCode.JOB_FETCH_SUCCESS, jobMapper.toJobResponse(job)));
     }
 
-    // ── Search (unauthenticated) endpoints ──────────────────────────────
-
     @Operation(
             summary = "Search Jobs",
             description =
@@ -197,8 +193,6 @@ public class JobController extends BaseController {
                         ApiSuccessCode.AUTOCOMPLETE_SUCCESS,
                         jobSearchService.autocomplete(q, limit)));
     }
-
-    // ── Public (unauthenticated) endpoints ───────────────────────────────
 
     @Operation(
             summary = "List Public Jobs",

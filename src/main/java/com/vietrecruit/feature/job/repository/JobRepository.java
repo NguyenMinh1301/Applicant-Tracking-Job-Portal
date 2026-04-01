@@ -24,6 +24,14 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
 
     List<Job> findAllByIdInAndDeletedAtIsNull(List<UUID> ids);
 
+    /**
+     * Returns salary aggregate statistics (min, max, median, sample size) for published jobs
+     * matching the given category and location UUIDs.
+     *
+     * @param categoryId optional category UUID filter; null to skip
+     * @param locationId optional location UUID filter; null to skip
+     * @return salary benchmark projection
+     */
     @Query(
             value =
                     """
@@ -44,6 +52,14 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
     SalaryBenchmarkProjection getSalaryBenchmark(
             @Param("category") UUID categoryId, @Param("location") UUID locationId);
 
+    /**
+     * Returns salary aggregate statistics for published jobs matching the given free-text job title
+     * and location name keywords.
+     *
+     * @param jobTitle partial job title keyword; null to skip title filtering
+     * @param locationName partial location name keyword; null to skip location filtering
+     * @return salary benchmark projection
+     */
     @Query(
             value =
                     """
