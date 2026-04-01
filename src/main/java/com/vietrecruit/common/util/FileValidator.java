@@ -40,6 +40,14 @@ public class FileValidator {
     private static final byte[] PNG_MAGIC = {(byte) 0x89, 0x50, 0x4E, 0x47};
     private static final byte[] WEBP_LABEL = {0x57, 0x45, 0x42, 0x50}; // "WEBP" at offset 8
 
+    /**
+     * Validates an uploaded CV file by checking size limit and magic-byte signature, then confirms
+     * MIME type via Tika.
+     *
+     * @param file the uploaded CV multipart file
+     * @throws com.vietrecruit.common.exception.ApiException if the file is too large or the type is
+     *     not allowed
+     */
     public void validateCv(MultipartFile file) {
         validateSize(file, MAX_CV_SIZE);
         byte[] header = readHeader(file, 12);
@@ -54,6 +62,13 @@ public class FileValidator {
         }
     }
 
+    /**
+     * Validates an uploaded avatar image by checking size limit and magic-byte signature.
+     *
+     * @param file the uploaded avatar multipart file
+     * @throws com.vietrecruit.common.exception.ApiException if the file is too large or the type is
+     *     not allowed
+     */
     public void validateAvatar(MultipartFile file) {
         validateSize(file, MAX_AVATAR_SIZE);
         byte[] header = readHeader(file, 12);
@@ -62,6 +77,13 @@ public class FileValidator {
         }
     }
 
+    /**
+     * Validates an uploaded banner image by checking size limit and magic-byte signature.
+     *
+     * @param file the uploaded banner multipart file
+     * @throws com.vietrecruit.common.exception.ApiException if the file is too large or the type is
+     *     not allowed
+     */
     public void validateBanner(MultipartFile file) {
         validateSize(file, MAX_BANNER_SIZE);
         byte[] header = readHeader(file, 12);

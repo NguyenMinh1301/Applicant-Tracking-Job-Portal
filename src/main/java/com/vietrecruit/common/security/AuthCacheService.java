@@ -10,6 +10,10 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Redis-backed cache service for authentication state: permission sets, token blacklist, OTP
+ * verification flow, OTP lockout, OTP cooldown, password reset tokens, and reset rate limiting.
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthCacheService {
@@ -27,8 +31,6 @@ public class AuthCacheService {
     private static final int RESET_RATE_MAX = 3;
 
     private final StringRedisTemplate redisTemplate;
-
-    // ── Permission Cache ────────────────────────────────────────────────
 
     public void cachePermissions(UUID userId, Set<String> permissions) {
         String key = String.format(PERMISSIONS_KEY_PREFIX, userId);
@@ -53,8 +55,6 @@ public class AuthCacheService {
         redisTemplate.delete(permissionsKey);
     }
 
-    // ── Token Blacklist ─────────────────────────────────────────────────
-
     public void blacklistToken(String jti, long remainingTtlSeconds) {
         if (remainingTtlSeconds > 0) {
             String key = BLACKLIST_KEY_PREFIX + jti;
@@ -66,8 +66,6 @@ public class AuthCacheService {
         String key = BLACKLIST_KEY_PREFIX + jti;
         return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
-
-    // ── OTP Verification ────────────────────────────────────────────────
 
     public void storeOtp(String email, String code, UUID userId, long ttlSeconds) {
         String key = OTP_KEY_PREFIX + email.toLowerCase();
@@ -100,8 +98,6 @@ public class AuthCacheService {
         redisTemplate.delete(key);
     }
 
-    // ── OTP Lockout ─────────────────────────────────────────────────────
-
     public void setLockout(String email, long ttlSeconds) {
         String key = OTP_LOCKOUT_PREFIX + email.toLowerCase();
         redisTemplate.opsForValue().set(key, "1", ttlSeconds, TimeUnit.SECONDS);
@@ -111,8 +107,6 @@ public class AuthCacheService {
         String key = OTP_LOCKOUT_PREFIX + email.toLowerCase();
         return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
-
-    // ── OTP Cooldown ────────────────────────────────────────────────────
 
     public void setCooldown(String email, long ttlSeconds) {
         String key = OTP_COOLDOWN_PREFIX + email.toLowerCase();
@@ -124,11 +118,7 @@ public class AuthCacheService {
         return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
 
-    // ── OTP Context Record ──────────────────────────────────────────────
-
     public record OtpContext(String code, UUID userId, int attempts) {}
-
-    // ── Password Reset Token ────────────────────────────────────────────
 
     public void storeResetToken(String email, String tokenHash, UUID userId, long ttlSeconds) {
         String key = RESET_TOKEN_PREFIX + email.toLowerCase();
@@ -153,8 +143,6 @@ public class AuthCacheService {
     }
 
     public record ResetTokenContext(String tokenHash, UUID userId) {}
-
-    // ── Password Reset Rate Limiting ────────────────────────────────────
 
     /**
      * Increments the password reset request count for the given email and returns true if the limit
