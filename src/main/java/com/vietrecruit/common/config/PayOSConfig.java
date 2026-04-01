@@ -9,6 +9,10 @@ import lombok.Setter;
 import vn.payos.PayOS;
 import vn.payos.core.ClientOptions;
 
+/**
+ * Configuration properties for the PayOS payment gateway client, including credentials, webhook
+ * URLs, and log verbosity.
+ */
 @Getter
 @Setter
 @Configuration

@@ -21,6 +21,10 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+/**
+ * Configures Redis-backed Spring Cache with per-cache TTLs and a dedicated string {@link
+ * org.springframework.data.redis.core.RedisTemplate} for low-level key operations.
+ */
 @Configuration
 @EnableCaching
 public class CacheConfig {

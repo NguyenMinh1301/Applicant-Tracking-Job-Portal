@@ -27,6 +27,7 @@ import com.vietrecruit.common.security.oauth2.OAuth2AuthenticationSuccessHandler
 
 import lombok.RequiredArgsConstructor;
 
+/** Configures Spring Security: stateless JWT filter chain, OAuth2 social login, and CORS. */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity

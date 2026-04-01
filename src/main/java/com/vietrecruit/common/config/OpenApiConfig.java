@@ -10,6 +10,7 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 
+/** Configures Swagger/OpenAPI documentation with Bearer JWT security scheme. */
 @Configuration
 public class OpenApiConfig {
 

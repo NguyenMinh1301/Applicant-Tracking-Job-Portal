@@ -7,6 +7,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+/**
+ * Configures named thread pool executors for AI background tasks and Elasticsearch bootstrapping.
+ */
 @Configuration
 public class AsyncConfig {
 

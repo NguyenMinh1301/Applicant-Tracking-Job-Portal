@@ -7,6 +7,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+/** Provides shared security beans: BCrypt password encoder and authentication manager. */
 @Configuration
 public class SecurityBeansConfig {
 
