@@ -1,0 +1,29 @@
+# Dev override: disable CDC / Elasticsearch stack
+#
+# Use this when working on features that do not require search (job search,
+# candidate search, company search) or CDC sync (Debezium -> Elasticsearch).
+#
+# Usage:
+#   Full stack (with search):    docker compose up
+#   Without search stack:        docker compose -f docker-compose.yml -f infra/dev-nosearch.yml up
+#
+# Services disabled by this override:
+#   - elasticsearch          (vr-elasticsearch)      -- ~2GB RAM
+#   - debezium-kafka-connect (vr-debezium-connect)   -- ~500MB RAM
+#   - init-kafka-connect     (vr-init-kafka-connect) -- ephemeral setup container
+#
+# Side effects:
+#   - ElasticsearchPopulationHealthIndicator reports OUT_OF_SERVICE on
+#     /actuator/health/readiness. App liveness and all non-search endpoints
+#     are unaffected.
+#   - No CDC events will be produced; Elasticsearch indices remain stale/absent.
+#   - scale: 0 is used intentionally to suppress these services without
+#     altering the depends_on chains declared in the base compose files.
+
+services:
+  elasticsearch:
+    scale: 0
+  debezium-kafka-connect:
+    scale: 0
+  init-kafka-connect:
+    scale: 0
