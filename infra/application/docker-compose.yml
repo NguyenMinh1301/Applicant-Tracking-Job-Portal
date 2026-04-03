@@ -66,7 +66,7 @@ services:
 
   init-kafka-connect:
     build:
-      context: ../../debezium
+      context: ./debezium
     image: vr-init-connector:latest
     container_name: vr-init-kafka-connect
     networks:
@@ -86,12 +86,12 @@ services:
 
   elasticsearch:
     build:
-      context: ../../elastic
+      context: ./elastic
       dockerfile: elasticsearch.Dockerfile
     image: vr-elasticsearch:8.17.0
     container_name: vr-elasticsearch
     volumes:
-      - ../../elastic/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./elastic/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     ports:
       - "9200:9200"
       - "9300:9300"

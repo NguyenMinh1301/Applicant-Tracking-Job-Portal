@@ -3,8 +3,9 @@ target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
-data
-grafana-storage
+infra/data/data
+infra/data/knowledge
+infra/monitoring/grafana-storage
 qdrant-storage
 
 ### STS ###
