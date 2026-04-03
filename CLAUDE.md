@@ -1,251 +1,199 @@
-# CLAUDE.md
+# BE-VietRecruit — Claude Code Configuration
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Project
 
-## Project Overview
+VietRecruit Backend — Spring Boot 3.4.2 ATS and job portal.
+Modular Monolith, Domain-Driven Design.
+Java 21, PostgreSQL 16 + pgvector, Redis 7, Elasticsearch 8.x, Apache Kafka.
 
-VietRecruit is a Spring Boot 3.4.2 / Java 21 Applicant Tracking System (ATS). It handles job postings, candidate applications, interviews, scorecards, and offers for recruitment workflows.
+See `.claude/rules/STRUCT.md` for the authoritative architecture map, module roster, and infrastructure details.
 
-## Technology Stack & Tools
+---
 
--   **Language**: Java 21
--   **Framework**: Spring Boot 3.4.2
--   **Database**: PostgreSQL 16 equipped with `pgvector` for AI similarity calculations.
--   **Schema Migrations**: Flyway.
--   **Caching / Session**: Redis.
--   **Messaging / Events**: Apache Kafka (async operations such as triggering emails and webhooks).
--   **Object Mapping**: MapStruct & Lombok.
--   **Resilience**: Resilience4j.
--   **Security**: Spring Security 6 utilizing stateless JWTs, mapped to OAuth2 identity providers (Google, Github).
--   **Payment Gateway**: PayOS native API integration with webhook signature verification.
--   **Build Tool**: Maven (`pom.xml`).
--   **CI/CD**: `Jenkinsfile` combined with GitHub Actions (`.github/workflows`) for robust automated rollouts.
--   **Testing**: Testcontainers alongside JUnit/Mockito for rigorous integration scenarios.
--   **API Documentation**: Provided via Swagger/OpenAPI (locally) and documented Postman collections (`postman/`).
-
-## Common Commands
+## Key Commands
 
 ```bash
-# Start all infrastructure + run app
-make run
-
-# Stop Docker infrastructure
-make stop
-
-# Build (skip tests)
+# Build (no tests)
 ./mvnw clean package -DskipTests
 
-# Run all unit tests (excludes integration test)
+# Compile only
+./mvnw clean compile -q
+
+# Run all unit tests (exclude integration)
 ./mvnw test -Dtest='!com.vietrecruit.ApplicationTests'
 
-# Run a single test class
-./mvnw test -Dtest=com.vietrecruit.feature.user.service.impl.ClientUserServiceImplTest
+# Run single test class
+./mvnw test -Dtest=ClassName
 
-# Run integration test (requires Docker for TestContainers)
+# Run integration test (requires Docker)
 ./mvnw test -Dtest=com.vietrecruit.ApplicationTests
 
-# Check code formatting
+# Auto-format code (Google AOSP)
+./mvnw spotless:apply
+
+# Check format without modifying
 ./mvnw spotless:check
 
-# Auto-fix code formatting
-./mvnw spotless:apply
+# Run locally (dev profile)
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+
+# Start local infrastructure
+docker compose up -d
+
+# Stop infrastructure
+docker compose down
+
+# make shortcuts
+make run     # compose up -d + spring-boot:run
+make stop    # compose down
+make clean   # mvnw clean + compose down -v
 ```
+
+---
+
+## Environment
+
+- Local config: `.env` (copy from `.env.example`)
+- Dev profile: `src/main/resources/application.dev.yaml`
+- Prod profile: `src/main/resources/application.prod.yaml`
+- Required local services: PostgreSQL 16, Redis 7, Kafka + Zookeeper, Maildev
+- Start all: `docker compose up -d`
+
+Infrastructure compose is split across `include:` references in root `docker-compose.yml`:
+- `infra/database/` — PostgreSQL, Redis
+- `infra/application/` — Kafka, Debezium, Elasticsearch, Logstash, Kibana
+- `infra/monitoring/` — Prometheus, Grafana (commented out by default)
+
+Key env vars: `POSTGRES_URL`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `KAFKA_BOOTSTRAP_SERVERS`, `JWT_SECRET`, `OPENAI_API_KEY`, `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY`, `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY`, `R2_SECRET_KEY`, `RESEND_API_KEY`, `GOOGLE_CLIENT_ID`, `GITHUB_CLIENT_ID`, `ELASTICSEARCH_URI`
+
+---
+
+## Agent System
+
+AgentKit submodule at `.claude/`. 2-layer system.
+
+**Core (AgentKit submodule)**: agents/, skills/, workflows/ — stack-agnostic
+
+**Project overlay (this repo)**:
+- `.claude/rules/STRUCT.md` — authoritative project map (load before any implementation)
+- `.claude/rules/COMMENT_STYLE.md` — Java comment and Javadoc enforcement
+- `.claude/rules/AGENT.md` — routing protocol and code generation standards (P0 priority)
+- `.claude/rules/BASE.md` — communication style
+
+**Workflow pipeline**:
+```
+/brainstorm → /plan → /create → /test → /review → /enhance → /debug → /docs → /commit
+```
+
+**Before implementing anything**, read:
+1. `.claude/rules/STRUCT.md` — project structure ground truth
+2. `.claude/rules/AGENT.md` — execution protocol and standards
+3. `.claude/skills/SKILLS.md` — skill index
+
+Skill index: `.claude/skills/SKILLS.md`
+Agent index: `.claude/agents/AGENTS.md`
+
+---
+
+## Architecture Constraints
+
+### Module boundaries
+
+- Controllers MUST NOT access Repository beans directly — always through Service layer
+- Cross-module access: import Service interface only, never Entity or Repository from another module
+- `common/` packages are the only legitimate cross-cutting dependency
+- Feature modules must not import from sibling feature modules
+
+### Transaction rules
+
+- `@Transactional` belongs on Service impl methods, not Controller or Repository
+- `REQUIRES_NEW` restricted to: `SubscriptionActivationService` (PayOS webhook isolation) and `PaymentReconciliationExecutor` (per-payment reconcile)
+- Never annotate interface methods with `@Transactional`
+- Document all `REQUIRES_NEW` usages with inline comment explaining isolation rationale
+
+### Testing rules
+
+- Integration tests use Testcontainers — never H2 as PostgreSQL substitute
+- Target: 85% line coverage, 80% branch coverage on Service impl classes
+- Test class naming: `{ClassName}Test` (unit), `{ClassName}IT` (integration)
+- WireMock available for external API mocking (PayOS, Resend, OpenAI)
+- Awaitility available for async assertion patterns
+
+### Cache rules
+
+- No `@CacheEvict` in service layer — all eviction is Kafka-driven via `cache.invalidation` topic
+- Cache key pattern: `vietrecruit:{domain}:{id}` for entries, `vietrecruit:{domain}:list` for lists
+- Never add new Spring Cache annotations without updating `CacheNames` constants
+- All 8 named caches have fixed TTLs — do not add `@Cacheable` without a corresponding `CacheNames` constant
+
+### Elasticsearch rules
+
+- Index operations go through `*SearchServiceImpl` (low-level REST client), not Spring Data ES
+- Never write directly to ES indices — all writes go through CDC consumers (Debezium → Kafka → SyncConsumer)
+- Index names must use prefix `vietrecruit_`
+- `ElasticsearchIndexInitializer` creates indices idempotently on startup — never create indices in application code
+
+### AI module rules
+
+- CV text extraction uses Apache Tika via `TikaDocumentReader` only
+- Agent memory key pattern: `ai:mem:{userId}:{sessionId}` (TTL 1hr, max 10 messages)
+- Embedding cache key pattern: `ai:emb:{sha256(text)}` (TTL 24hr)
+- Vector dimensions: 1536 (PgVectorStore HNSW index — cannot change without migration)
+- AI knowledge chunks: 100–800 tokens; valid categories in `application.yaml` under `ai.knowledge.supported-categories`
+
+### Security rules
+
+- All endpoints require JWT unless explicitly `@PermitAll` in `SecurityConfig`
+- OAuth2 cookie serialization: Jackson + Spring Security modules, URL-safe Base64; `HttpOnly`, `Secure`, `SameSite=Lax`
+- PayOS webhook: verify HMAC signature against `PAYOS_CHECKSUM_KEY` before processing any event
+
+---
+
+## Feature Modules
+
+| Module | Responsibility |
+|--------|----------------|
+| `ai` | AI features: matching, screening, CV advice, JD generation, interview questions, salary benchmark |
+| `application` | ATS pipeline: applications, interviews, scorecards, offers |
+| `auth` | Authentication: login, register, OAuth2, JWT refresh, password reset, email verification |
+| `candidate` | Candidate profiles, resume management, Elasticsearch search |
+| `category` | Job category reference data |
+| `company` | Employer profiles, branding, Elasticsearch search |
+| `department` | Internal employer department management |
+| `invitation` | Team invitation flows |
+| `job` | Job postings, visibility controls, quota management, Elasticsearch search |
+| `location` | Location reference data |
+| `notification` | Async email and in-app alerts via Kafka + Resend API |
+| `payment` | PayOS integration, webhook verification, payment reconciliation |
+| `subscription` | Subscription plans, billing cycles, job posting quotas |
+| `user` | User account management, RBAC |
+
+---
 
 ## Code Formatting
 
-Spotless with **Google Java Format (AOSP style)** is enforced. Rules:
+Spotless with Google Java Format (AOSP):
 - 4-space tabs
 - Import order: `java`, `jakarta`, `org`, `com`
 - Unused imports removed automatically
 - Trailing whitespace trimmed, final newline enforced
+- Enforced at `compile` phase via Spotless Maven plugin
 
-Run `./mvnw spotless:apply` before committing. Add `-Dspotless.check.skip=true` to skip during builds if needed.
+Run `./mvnw spotless:apply` before committing.
 
-## Architecture
-
-### Module Layout
-
-```text
-VietRecruit/
-├── .agent/                     # AI Agent configuration, skills, workflows, and rules
-├── .github/                    # GitHub Actions workflows for CI/CD
-├── assets/                     # Static project assets (images, system diagrams)
-├── database/                   # Database scripts and aggregate Flyway init scripts
-├── debezium/                   # Debezium configurations for CDC (Change Data Capture)
-├── docs/                       # Project Documentation (Architecture, APIs, rules)
-├── elk/                        # ELK Stack configuration (Elasticsearch, Logstash, Kibana)
-├── grafana-storage/            # Persistent storage volume for Grafana
-├── infra/                      # Legacy/alternative infrastructure configs
-├── monitor/                    # Prometheus monitoring configurations
-├── postman/                    # API Collections (Postman) for testing
-├── scripts/                    # Utility scripts for development and deployment
-├── src/                        # Main Application Source Code (Java/Spring Boot)
-│   ├── main/
-│   │   ├── java/com/vietrecruit/
-│   │   │   ├── common/         # Shared horizontal utilities and base classes
-│   │   │   │   ├── base/       # Abstract Controller and Entity enforcing common behaviors
-│   │   │   │   ├── config/     # Global configurations (Web, Security, Kafka, Redis, OpenAPI)
-│   │   │   │   │   ├── cache/  # CacheConfig, CacheNames, CacheInvalidationConsumer, CacheEventPublisher, CacheInvalidationEvent
-│   │   │   │   │   ├── elasticsearch/ # ElasticsearchConfig, ElasticsearchIndexInitializer, ElasticsearchDataBootstrap
-│   │   │   │   │   │   │              # ElasticsearchBootstrapState, ElasticsearchPopulationHealthIndicator, ElasticsearchConstants
-│   │   │   │   │   │   └── sync/      # JobSyncConsumer, CandidateSyncConsumer, CompanySyncConsumer (Debezium CDC → ES)
-│   │   │   │   │   ├── kafka/  # KafkaConfig, KafkaTopicNames, CdcRecordFilter
-│   │   │   │   │   └── security/ # SecurityConfig, SecurityBeansConfig
-│   │   │   │   ├── enums/      # Global enums (ApiErrorCode, ApiSuccessCode, UserRole)
-│   │   │   │   ├── exception/  # Global Exception Handler returning standard API responses
-│   │   │   │   ├── init/       # Application seeders (e.g. creating default admin)
-│   │   │   │   ├── response/   # Standardized wrapper classes (ApiResponse, PageResponse)
-│   │   │   │   ├── security/   # JWT utilities, Auth Managers, OAuth2 flows
-│   │   │   │   ├── storage/    # Multi-provider storage framework (e.g. Cloudflare R2)
-│   │   │   │   └── util/       # Application-wide utility helper classes
-│   │   │   ├── feature/        # Vertical feature modules (Domain-Driven Design)
-│   │   │   │   ├── ai/         # AI-powered features (modular sub-domain layout)
-│   │   │   │   │   ├── shared/         # Cross-cutting AI services and infrastructure
-│   │   │   │   │   │   ├── config/     # OpenAiConfig, AiProperties, VectorStoreProperties
-│   │   │   │   │   │   ├── service/    # EmbeddingService, RagService, AgentService
-│   │   │   │   │   │   ├── memory/     # AgentMemoryStore (Redis-backed)
-│   │   │   │   │   │   ├── tools/      # @Tool beans (JobSearch, CandidateSearch, SalaryBenchmark)
-│   │   │   │   │   │   └── event/      # CvUploadedEvent, JobPublishedEvent
-│   │   │   │   │   ├── knowledge/      # Knowledge document ingestion and retrieval
-│   │   │   │   │   │   ├── entity/     # KnowledgeDocument
-│   │   │   │   │   │   ├── repository/
-│   │   │   │   │   │   ├── service/    # KnowledgeIngestionService + impl
-│   │   │   │   │   │   └── dto/
-│   │   │   │   │   ├── ingestion/      # Kafka event consumers
-│   │   │   │   │   │   └── consumer/   # AiIngestionConsumer (R2 fetch + Apache Tika PDF parse)
-│   │   │   │   │   │                   # CvUploadedIngestionConsumer (topic: ai.cv-uploaded)
-│   │   │   │   │   │                   # JobPublishedIngestionConsumer (topic: ai.job-published)
-│   │   │   │   │   ├── matching/       # Job-candidate recommendation
-│   │   │   │   │   │   ├── controller/ # GET /candidates/me/job-recommendations
-│   │   │   │   │   │   ├── service/    # RecommendationService + impl
-│   │   │   │   │   │   └── dto/        # JobRecommendationResponse
-│   │   │   │   │   ├── screening/      # AI application screening
-│   │   │   │   │   │   ├── controller/ # POST .../trigger, GET .../screening
-│   │   │   │   │   │   ├── service/    # ScreeningService + impl
-│   │   │   │   │   │   └── dto/        # ScreeningResultResponse
-│   │   │   │   │   ├── cv/             # CV improvement advisor
-│   │   │   │   │   │   ├── service/    # CvImprovementService + impl
-│   │   │   │   │   │   └── dto/        # CvImprovementResponse
-│   │   │   │   │   ├── jd/             # Job description generator
-│   │   │   │   │   │   ├── controller/ # POST /jobs/generate-description
-│   │   │   │   │   │   ├── service/    # JdGeneratorService + impl
-│   │   │   │   │   │   └── dto/        # JdGenerateRequest, JdGenerateResponse
-│   │   │   │   │   ├── interview/      # AI interview question generator
-│   │   │   │   │   │   ├── controller/
-│   │   │   │   │   │   ├── service/    # InterviewQuestionService + impl
-│   │   │   │   │   │   └── dto/
-│   │   │   │   │   └── salary/         # Salary benchmark estimator
-│   │   │   │   │       ├── controller/
-│   │   │   │   │       ├── service/    # SalaryBenchmarkService + impl
-│   │   │   │   │       └── dto/
-│   │   │   │   ├── application/# ATS: Applications, Interviews, Scorecards, Offers
-│   │   │   │   ├── auth/       # Authentication (Login, Register, Password Reset, Refresh)
-│   │   │   │   ├── candidate/  # Candidate profiles, resume management, and ES search service
-│   │   │   │   ├── category/   # Job categories reference system
-│   │   │   │   ├── company/    # Employer company profiles, branding, and ES search service
-│   │   │   │   ├── department/ # Internal employer departments
-│   │   │   │   ├── job/        # Job postings, visibility controls, search attributes, and ES search service
-│   │   │   │   ├── location/   # Job locations reference system
-│   │   │   │   ├── notification/# Asynchronous email & in-app alerts (via Kafka)
-│   │   │   │   ├── payment/    # PayOS integration and webhook verification
-│   │   │   │   ├── subscription/# Employer subscription plans, billing, and posting quotas
-│   │   │   │   └── user/       # General user account records and management
-│   │   │   └── Application.java# Spring Boot application entry point
-│   │   └── resources/
-│   │       ├── db/migration/   # Flyway SQL migrations determining database schema
-│   │       ├── resilience/     # Resilience4j YAML files for Circuit Breaker/Rate Limiting
-│   │       ├── templates/email # Thymeleaf/Freemarker HTML email templates
-│   │       ├── application.yaml# Core application configuration
-│   │       ├── application.dev.yaml  # Dev profile (local backing services)
-│   │       ├── application.prod.yaml # Prod profile (managed remote backing services)
-│   │       └── logback-spring.xml    # Advanced ELK / Async Logging configuration
-│   └── test/                   # Unit tests and Testcontainers integration suites
-├── .env                        # Local development environment variables
-├── .env.example                # Template for environment variables
-├── .env.prod                   # Production environment variables
-├── docker-compose.yml          # Local infrastructure (Postgres, Redis, Kafka, Zookeeper)
-├── docker-compose.prod.yml     # Production infrastructure including observability stack
-├── Dockerfile                  # Production-ready multi-stage Docker build
-├── Jenkinsfile                 # Jenkins CI/CD declarative pipeline
-├── Makefile                    # Make command shortcuts for developers
-└── pom.xml                     # Maven definitions and dependency lock
-```
-
-### Feature Modules
-
-Each feature module follows the pattern: `controller → service interface → service impl → repository → entity`. DTOs are mapped with **MapStruct**.
-
-| Module | Responsibility |
-|--------|----------------|
-| `auth` | JWT (RS256), OAuth2 (Google/GitHub), email verification, refresh tokens |
-| `user` | Admin and client user management, RBAC |
-| `company` | Company/organization profiles |
-| `department` | Department structures within companies |
-| `job` | Job postings, quotas, status lifecycle |
-| `candidate` | Candidate profiles |
-| `application` | Application tracking, status history |
-| `interview` | Interview scheduling with strict status transitions |
-| `scorecard` | Interview evaluations with uniqueness constraints |
-| `payment` | PayOS payment transactions and webhooks |
-| `subscription` | Employer subscription plans and billing |
-| `notification` | Email notifications via Resend API |
-| `category`, `location` | Reference data |
-
-### Source Code Architecture (`src/main/java`)
-
-The project follows a **Modular Monolith** approach with a **Layered Architecture** inside each vertical feature module.
-
-#### A. The `common` Module
-This acts as the cross-cutting concern layer used by all features.
-- `base`: Contains abstract `BaseController` and `BaseEntity` ensuring uniform audit fields (createdAt, updatedAt) and resilience handling.
-- `config`: Global configurations for Spring Security, Kafka, Redis, and Swagger/OpenAPI.
-- `exception`: Contains `GlobalExceptionHandler` to translate all exceptions into a standard `ApiException` and uniform `ApiResponse`.
-- `init`: Application initializers (e.g., seeding admin users on first startup).
-- `response`: Standardized API wrappers (`ApiResponse`, `PageResponse`) to ensure all endpoints respond consistently.
-- `security`: JWT filters, Authentication managers, and OAuth2 setups (Google, GitHub).
-
-#### B. The `feature` Modules (Domain-Driven Design)
-The domain is split into strict business capabilities containing distinct layers. Features represent isolated system components with limited cross-coupling.
-Inside each module (e.g., `job`, `subscription`, `payment`):
-- `controller/`: REST API endpoints. Extends `BaseController` for common resilience patterns and standardized error handling.
-- `service/`: Interfaces and `impl/` implementations for pure business logic and transaction boundaries.
-- `repository/`: Spring Data JPA interfaces. Includes `Specification` files targeting specific database-level search capabilities.
-- `entity/`: JPA annotated domain models mirroring the relational schema.
-- `mapper/`: MapStruct interfaces used to cleanly uncouple Entities from external representation DTOs.
-- `dto/`: Immutable Request/Response objects isolated to controller interaction payload contracts.
-
-### Database
-
-Flyway manages 25 migrations (`src/main/resources/db/migration/`). PostgreSQL custom enum types are defined in V1 and used throughout:
-
-- `application_status`: `NEW → SCREENING → INTERVIEW → OFFER → HIRED | REJECTED`
-- `interview_status`: `SCHEDULED → COMPLETED | CANCELED`
-- `job_status`: `DRAFT → PUBLISHED → CLOSED`
-- `offer_status`, `scorecard_result`, `subscription_status`, `payment_status`, `billing_cycle`
-
-The `pgvector` extension supports AI embeddings. WAL is set to `logical` for Debezium CDC.
-
-### Security
-
-- JWT access + refresh tokens with RS256 signatures
-- OAuth2 social login (Google, GitHub)
-- Email verification flow
-- RBAC via Spring Security
-
-### Infrastructure Composition
-
-Docker Compose is split across:
-- `infra/database/` — PostgreSQL, Redis
-- `infra/application/` — Kafka, Debezium, Elasticsearch, Logstash, Kibana
-- `infra/monitoring/` — Prometheus, Grafana (optional, commented out by default)
-
-The root `docker-compose.yml` includes these via `include:`.
-
-## Environment Setup
-
-Copy `.env.example` to `.env`. Required variables include: `POSTGRES_URL`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `KAFKA_BOOTSTRAP_SERVERS`, `JWT_SECRET`, `OPENAI_API_KEY`, `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY`, `R2_SECRET_KEY`, `RESEND_API_KEY`, `GOOGLE_CLIENT_ID`, `GITHUB_CLIENT_ID`.
+---
 
 ## CI/CD
 
-- **GitHub Actions** (`.github/workflows/test.yml`): runs unit tests on push to `main`/`release`, caches Maven deps, skips integration tests.
-- **Jenkins** (`Jenkinsfile`): builds Docker image, pushes to Docker Hub, deploys to VPS.
+- **Jenkins**: `Jenkinsfile` — builds Docker image, pushes to Docker Hub, deploys to VPS
+- **GitHub Actions**: `.github/workflows/` — unit tests on push to `main`/`release`
+- **Production Docker**: `Dockerfile` (multi-stage build)
+- **Production compose**: `docker-compose.prod.yml` (includes ELK, Prometheus, Grafana, app service)
+
+---
+
+## Hooks (Active)
+
+Configured in `.claude/settings.local.json`:
+- **PostToolUse** (Write/Edit/MultiEdit): runs `.claude/hooks/post-edit-format.sh` → `./mvnw spotless:apply -q` on `.java` files
+- **PreToolUse** (git commit): runs `.claude/hooks/pre-commit-lint.sh` → blocks commit on comment style violations (decorative dividers, TODO without VR-NNN, System.out.print)
