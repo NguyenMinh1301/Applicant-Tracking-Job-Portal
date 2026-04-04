@@ -42,4 +42,4 @@ build/
 
 ### Production compose (local secrets) ###
 docker-compose.prod.yml
-docker-compose.prod tweaks.yml
+docker-compose.prod.tweaks.yml
