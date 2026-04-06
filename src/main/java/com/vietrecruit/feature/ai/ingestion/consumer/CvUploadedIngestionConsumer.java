@@ -88,17 +88,21 @@ public class CvUploadedIngestionConsumer {
     @DltHandler
     public void handleDlt(
             ConsumerRecord<String, CvUploadedEvent> record,
-            @Header(KafkaHeaders.DLT_EXCEPTION_FQCN) byte[] exceptionFqcn,
-            @Header(KafkaHeaders.DLT_EXCEPTION_MESSAGE) byte[] exceptionMessage,
-            @Header(KafkaHeaders.DLT_ORIGINAL_TOPIC) byte[] originalTopic) {
+            @Header(value = KafkaHeaders.DLT_EXCEPTION_FQCN, required = false) byte[] exceptionFqcn,
+            @Header(value = KafkaHeaders.DLT_EXCEPTION_MESSAGE, required = false)
+                    byte[] exceptionMessage,
+            @Header(value = KafkaHeaders.DLT_ORIGINAL_TOPIC, required = false)
+                    byte[] originalTopic) {
         String candidateId =
                 record.value() != null ? record.value().candidateId().toString() : "unknown";
+        // Headers are only injected when the record arrives via @RetryableTopic retry chain;
+        // records routed directly to the DLT (e.g. non-retryable exception) may omit them
         log.error(
                 "CV ingestion permanently failed. candidateId={}, originalTopic={}, exception={},"
                         + " message={}",
                 candidateId,
-                new String(originalTopic),
-                new String(exceptionFqcn),
-                new String(exceptionMessage));
+                originalTopic != null ? new String(originalTopic) : "unknown",
+                exceptionFqcn != null ? new String(exceptionFqcn) : "unknown",
+                exceptionMessage != null ? new String(exceptionMessage) : "unknown");
     }
 }

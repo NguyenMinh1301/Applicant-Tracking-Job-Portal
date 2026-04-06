@@ -8,6 +8,7 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.ai.document.Document;
@@ -41,9 +42,13 @@ public class EmbeddingService {
 
     @CircuitBreaker(name = "openaiApi", fallbackMethod = "embedAndStoreFallback")
     public void embedAndStore(String id, String content, Map<String, Object> metadata) {
-        Document doc = new Document(id, content, metadata);
+        // PgVectorStore maps its id column to PostgreSQL uuid — derive a deterministic UUID from
+        // the
+        // logical key so the prefixed string (e.g. "cv-<uuid>") does not violate the column type
+        String docId = UUID.nameUUIDFromBytes(id.getBytes(StandardCharsets.UTF_8)).toString();
+        Document doc = new Document(docId, content, metadata);
         vectorStore.add(List.of(doc));
-        log.debug("Stored embedding: id={}, metadataKeys={}", id, metadata.keySet());
+        log.debug("Stored embedding: id={}, metadataKeys={}", docId, metadata.keySet());
     }
 
     @SuppressWarnings("unused")
