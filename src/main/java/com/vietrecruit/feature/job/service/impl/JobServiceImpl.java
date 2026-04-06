@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import jakarta.persistence.criteria.Predicate;
 
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -98,7 +99,13 @@ public class JobServiceImpl implements JobService {
 
         job.setStatus(JobStatus.PUBLISHED);
         job.setPublishedAt(java.time.Instant.now());
-        var saved = jobRepository.save(job);
+        Job saved;
+        try {
+            saved = jobRepository.save(job);
+        } catch (OptimisticLockingFailureException e) {
+            throw new ApiException(
+                    ApiErrorCode.CONFLICT, "Job was modified concurrently. Please retry.");
+        }
         log.info("Published job id={} company={}", jobId, companyId);
         cacheEventPublisher.publish("job", "published", saved.getId(), companyId);
         try {
@@ -131,7 +138,13 @@ public class JobServiceImpl implements JobService {
         }
 
         job.setStatus(JobStatus.CLOSED);
-        var saved = jobRepository.save(job);
+        Job saved;
+        try {
+            saved = jobRepository.save(job);
+        } catch (OptimisticLockingFailureException e) {
+            throw new ApiException(
+                    ApiErrorCode.CONFLICT, "Job was modified concurrently. Please retry.");
+        }
 
         // Decrement active job count after successful save
         quotaGuard.decrementActiveJobs(companyId);
