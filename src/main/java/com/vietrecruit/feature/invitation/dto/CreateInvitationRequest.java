@@ -2,6 +2,7 @@ package com.vietrecruit.feature.invitation.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -31,5 +32,6 @@ public class CreateInvitationRequest {
             example = "HR",
             requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "Role is required")
+    @Pattern(regexp = "^(HR|INTERVIEWER)$", message = "Role must be HR or INTERVIEWER")
     private String role;
 }

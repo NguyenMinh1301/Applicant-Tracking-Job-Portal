@@ -51,9 +51,14 @@ public class RegisterRequest {
     @Size(max = 50, message = "Phone must not exceed 50 characters")
     private String phone;
 
+    // Intentional: employer self-registration is a supported flow (creates company shell)
     @Schema(
             description = "Account type: CANDIDATE (default) or EMPLOYER",
             example = "CANDIDATE",
+            allowableValues = {"CANDIDATE", "EMPLOYER"},
             requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    @Pattern(
+            regexp = "^(CANDIDATE|EMPLOYER)$",
+            message = "Account type must be CANDIDATE or EMPLOYER")
     private String accountType;
 }
