@@ -210,8 +210,8 @@ public class SalaryBenchmarkServiceImpl implements SalaryBenchmarkService {
                 maxes.add(maxVal);
                 midpoints.add(
                         minVal.add(maxVal).divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP));
-            } catch (NumberFormatException ignored) {
-                // skip malformed metadata
+            } catch (NumberFormatException e) {
+                log.debug("Failed to parse salary value from metadata: {}", e.getMessage());
             }
         }
 

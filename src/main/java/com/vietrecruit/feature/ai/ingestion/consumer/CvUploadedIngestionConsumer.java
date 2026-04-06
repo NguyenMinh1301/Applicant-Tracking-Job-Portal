@@ -78,6 +78,8 @@ public class CvUploadedIngestionConsumer {
         Map<String, Object> metadata =
                 Map.of("type", "cv", "candidateId", event.candidateId().toString());
 
+        // Save and embed are intentionally non-atomic — @RetryableTopic covers embed failure on
+        // retry
         embeddingService.embedAndStore("cv-" + event.candidateId(), cvText, metadata);
 
         log.info("AI ingestion: CV embedded successfully: candidateId={}", event.candidateId());
