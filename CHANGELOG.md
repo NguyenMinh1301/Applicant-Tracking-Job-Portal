@@ -82,7 +82,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - Added database migrations for payment transactions
 
 #### Authentication & Security (PR #12, #13)
-- Implemented stateless JWT (RS256) authentication with Redis token caching
+- Implemented stateless JWT (HS512) authentication with Redis token caching
 - Implemented refresh token rotation and explicit error codes
 - Implemented email verification flow with numeric 8-digit OTP generation and Redis caching
 - Implemented OAuth2 social login flows (Google, GitHub) with cookie-based authorization request repository and one-time code exchange

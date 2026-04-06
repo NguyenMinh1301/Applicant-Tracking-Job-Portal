@@ -177,7 +177,7 @@ Each feature module follows the pattern: `controller → service interface → s
 
 | Module | Responsibility |
 |--------|----------------|
-| `auth` | JWT (RS256), OAuth2 (Google/GitHub), email verification, refresh tokens |
+| `auth` | JWT (HS512), OAuth2 (Google/GitHub), email verification, refresh tokens |
 | `user` | Admin and client user management, RBAC |
 | `company` | Company/organization profiles |
 | `department` | Department structures within companies |
@@ -227,7 +227,7 @@ The `pgvector` extension supports AI embeddings. WAL is set to `logical` for Deb
 
 ### Security
 
-- JWT access + refresh tokens with RS256 signatures
+- JWT access + refresh tokens with HS512 signatures
 - OAuth2 social login (Google, GitHub)
 - Email verification flow
 - RBAC via Spring Security
