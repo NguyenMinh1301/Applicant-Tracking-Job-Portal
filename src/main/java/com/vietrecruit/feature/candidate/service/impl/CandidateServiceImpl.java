@@ -1,6 +1,8 @@
 package com.vietrecruit.feature.candidate.service.impl;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,6 +13,7 @@ import java.util.UUID;
 
 import jakarta.persistence.criteria.Predicate;
 
+import org.apache.tika.Tika;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -24,7 +27,7 @@ import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.common.storage.StorageService;
 import com.vietrecruit.feature.ai.shared.event.CvUploadedEvent;
-import com.vietrecruit.feature.application.repository.ApplicationRepository;
+import com.vietrecruit.feature.application.service.ApplicationService;
 import com.vietrecruit.feature.candidate.dto.request.CandidateUpdateRequest;
 import com.vietrecruit.feature.candidate.dto.response.CandidateProfileResponse;
 import com.vietrecruit.feature.candidate.dto.response.CandidateSearchResult;
@@ -46,6 +49,7 @@ import lombok.extern.slf4j.Slf4j;
 public class CandidateServiceImpl implements CandidateService {
 
     private static final long MAX_CV_SIZE_BYTES = 5L * 1024 * 1024; // 5MB
+    private static final Tika TIKA = new Tika();
 
     private static final Set<String> ALLOWED_CONTENT_TYPES =
             Set.of(
@@ -58,7 +62,7 @@ public class CandidateServiceImpl implements CandidateService {
     private final CandidateMapper candidateMapper;
     private final StorageService storageService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
-    private final ApplicationRepository applicationRepository;
+    private final ApplicationService applicationService;
     private final UserRepository userRepository;
 
     @Override
@@ -90,6 +94,16 @@ public class CandidateServiceImpl implements CandidateService {
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
             throw new ApiException(ApiErrorCode.CANDIDATE_CV_INVALID_TYPE);
+        }
+
+        // Magic byte validation prevents MIME spoofing (e.g., HTML disguised as PDF)
+        try (InputStream is = new BufferedInputStream(file.getInputStream())) {
+            String detectedType = TIKA.detect(is);
+            if (!ALLOWED_CONTENT_TYPES.contains(detectedType)) {
+                throw new ApiException(ApiErrorCode.CANDIDATE_CV_INVALID_TYPE);
+            }
+        } catch (IOException e) {
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "Failed to validate file type", e);
         }
 
         if (file.getSize() > MAX_CV_SIZE_BYTES) {
@@ -351,7 +365,7 @@ public class CandidateServiceImpl implements CandidateService {
             Short minYearsExperience,
             int limit,
             UUID companyId) {
-        List<UUID> applicantIds = applicationRepository.findCandidateIdsByCompanyId(companyId);
+        List<UUID> applicantIds = applicationService.findCandidateIdsByCompanyId(companyId);
         if (applicantIds.isEmpty()) {
             return List.of();
         }
