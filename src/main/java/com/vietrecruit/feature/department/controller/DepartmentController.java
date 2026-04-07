@@ -64,6 +64,7 @@ public class DepartmentController extends BaseController {
 
     @Operation(summary = "List Departments")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'HR')")
     @Parameters({
         @Parameter(name = "page", description = "Page number (0-based)", example = "0"),
         @Parameter(name = "size", description = "Page size", example = "20"),
@@ -87,6 +88,7 @@ public class DepartmentController extends BaseController {
 
     @Operation(summary = "Get Department")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'HR')")
     @GetMapping(ApiConstants.Department.GET)
     public ResponseEntity<ApiResponse<DepartmentResponse>> get(@PathVariable UUID id) {
         var companyId = resolveCompanyId();
