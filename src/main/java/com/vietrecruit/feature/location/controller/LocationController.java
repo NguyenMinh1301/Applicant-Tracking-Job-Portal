@@ -11,6 +11,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -48,6 +49,7 @@ public class LocationController extends BaseController {
 
     @Operation(summary = "Create Location")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'HR')")
     @PostMapping
     public ResponseEntity<ApiResponse<LocationResponse>> create(
             @Valid @RequestBody LocationRequest request) {
@@ -62,6 +64,7 @@ public class LocationController extends BaseController {
 
     @Operation(summary = "List Locations")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'HR')")
     @Parameters({
         @Parameter(name = "page", description = "Page number (0-based)", example = "0"),
         @Parameter(name = "size", description = "Page size", example = "20"),
@@ -85,6 +88,7 @@ public class LocationController extends BaseController {
 
     @Operation(summary = "Get Location")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'HR')")
     @GetMapping(ApiConstants.Location.GET)
     public ResponseEntity<ApiResponse<LocationResponse>> get(@PathVariable UUID id) {
         var companyId = resolveCompanyId();
@@ -96,6 +100,7 @@ public class LocationController extends BaseController {
 
     @Operation(summary = "Update Location")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'HR')")
     @PutMapping(ApiConstants.Location.UPDATE)
     public ResponseEntity<ApiResponse<LocationResponse>> update(
             @PathVariable UUID id, @Valid @RequestBody LocationRequest request) {
@@ -109,6 +114,7 @@ public class LocationController extends BaseController {
 
     @Operation(summary = "Delete Location")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'HR')")
     @DeleteMapping(ApiConstants.Location.DELETE)
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         var companyId = resolveCompanyId();

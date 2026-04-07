@@ -38,7 +38,7 @@ public class InvitationController extends BaseController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "201",
             description = "Invitation created successfully")
-    @PreAuthorize("hasAuthority('USER:MANAGE')")
+    @PreAuthorize("hasRole('COMPANY_ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse<InvitationResponse>> create(
             @Valid @RequestBody CreateInvitationRequest request) {

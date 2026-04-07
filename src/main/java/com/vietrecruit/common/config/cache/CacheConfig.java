@@ -45,7 +45,10 @@ public class CacheConfig {
                         .allowIfSubType("com.vietrecruit.")
                         .allowIfSubType("java.util.")
                         .allowIfSubType("java.lang.")
+                        .allowIfSubType("java.math.")
+                        .allowIfSubType("java.time.")
                         .allowIfSubType("org.springframework.data.")
+                        .allowIfSubTypeIsArray()
                         .build(),
                 ObjectMapper.DefaultTyping.NON_FINAL,
                 JsonTypeInfo.As.PROPERTY);

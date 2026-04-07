@@ -1,6 +1,7 @@
 package com.vietrecruit.feature.application.entity;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -73,8 +74,9 @@ public class Application {
     @Column(name = "ai_score")
     private Integer aiScore;
 
-    @Column(name = "ai_score_breakdown", columnDefinition = "JSONB")
-    private String aiScoreBreakdown;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "ai_score_breakdown", columnDefinition = "jsonb")
+    private Map<String, Object> aiScoreBreakdown;
 
     @Column(name = "ai_scored_at")
     private Instant aiScoredAt;
