@@ -53,7 +53,7 @@ public class ScreeningScoringExecutor {
                     app.getId(),
                     e.getMessage());
             app.setAiScore(-1);
-            app.setAiScoreBreakdown("{\"error\":\"agent_call_failed\"}");
+            app.setAiScoreBreakdown(Map.of("error", "agent_call_failed"));
             app.setAiScoredAt(Instant.now());
             applicationRepository.save(app);
         }
@@ -131,7 +131,7 @@ public class ScreeningScoringExecutor {
             }
 
             app.setAiScore(overallScore);
-            app.setAiScoreBreakdown(objectMapper.writeValueAsString(parsed));
+            app.setAiScoreBreakdown(parsed);
             app.setAiScoredAt(Instant.now());
         } catch (JsonProcessingException e) {
             log.warn(
@@ -139,7 +139,7 @@ public class ScreeningScoringExecutor {
                     app.getId(),
                     agentResponse);
             app.setAiScore(-1);
-            app.setAiScoreBreakdown("{\"error\":\"parse_failed\"}");
+            app.setAiScoreBreakdown(Map.of("error", "parse_failed"));
             app.setAiScoredAt(Instant.now());
         }
         applicationRepository.save(app);

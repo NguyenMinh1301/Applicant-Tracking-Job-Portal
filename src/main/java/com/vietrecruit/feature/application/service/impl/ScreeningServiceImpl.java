@@ -16,9 +16,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.ai.shared.service.EmbeddingService;
@@ -49,7 +46,6 @@ public class ScreeningServiceImpl implements ScreeningService {
     private final UserRepository userRepository;
     private final EmbeddingService embeddingService;
     private final ScreeningScoringExecutor scoringExecutor;
-    private final ObjectMapper objectMapper;
     private final ScreeningMapper screeningMapper;
 
     private static final int TOP_K_CANDIDATES = 20;
@@ -204,15 +200,7 @@ public class ScreeningServiceImpl implements ScreeningService {
         ApplicationScreeningResponse response = screeningMapper.toScreeningResponse(app, user);
 
         if (app.getAiScoreBreakdown() != null) {
-            try {
-                Map<String, Object> breakdown =
-                        objectMapper.readValue(app.getAiScoreBreakdown(), new TypeReference<>() {});
-                applyBreakdownFields(response, breakdown);
-            } catch (JsonProcessingException e) {
-                log.warn(
-                        "Screening: failed to parse stored breakdown for applicationId={}",
-                        app.getId());
-            }
+            applyBreakdownFields(response, app.getAiScoreBreakdown());
         }
 
         return response;
