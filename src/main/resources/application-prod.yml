@@ -43,9 +43,12 @@ app:
 
 springdoc:
   swagger-ui:
-    enabled: false
+    path: /vietrecruit/api-docs
+    config-url: /vietrecruit/v3/api-docs/swagger-config
+    url: /vietrecruit/v3/api-docs
   api-docs:
-    enabled: false
+    path: /vietrecruit/v3/api-docs
+  server-url: ${APP_BASE_URL}
 
 server:
   forward-headers-strategy: framework
