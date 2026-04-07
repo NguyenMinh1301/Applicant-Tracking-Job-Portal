@@ -125,6 +125,7 @@ public class JobController extends BaseController {
                 description = "Sort field and direction",
                 example = "createdAt,desc")
     })
+    @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'HR')")
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<JobSummaryResponse>>> listJobs(
             @ParameterObject
@@ -144,6 +145,7 @@ public class JobController extends BaseController {
             summary = "Get Job",
             description = "Gets a single job detail owned by the employer's company")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'HR')")
     @GetMapping(ApiConstants.Job.GET)
     public ResponseEntity<ApiResponse<JobResponse>> getJob(@PathVariable UUID id) {
         var companyId = resolveCompanyId();

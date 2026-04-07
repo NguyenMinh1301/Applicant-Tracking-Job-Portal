@@ -1,6 +1,7 @@
 package com.vietrecruit.feature.subscription.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -36,6 +37,7 @@ public class SubscriptionController extends BaseController {
             responseCode = "200",
             description = "Subscription retrieved successfully")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'HR')")
     @GetMapping(ApiConstants.Subscription.CURRENT)
     public ResponseEntity<ApiResponse<SubscriptionResponse>> getCurrentSubscription() {
         var companyId = resolveCompanyId();
@@ -52,6 +54,7 @@ public class SubscriptionController extends BaseController {
             responseCode = "200",
             description = "Quota retrieved successfully")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'HR')")
     @GetMapping(ApiConstants.Subscription.QUOTA)
     public ResponseEntity<ApiResponse<QuotaResponse>> getCurrentQuota() {
         var companyId = resolveCompanyId();
@@ -68,6 +71,7 @@ public class SubscriptionController extends BaseController {
             responseCode = "200",
             description = "Subscription cancelled successfully")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasRole('COMPANY_ADMIN')")
     @PutMapping(ApiConstants.Subscription.CANCEL)
     public ResponseEntity<ApiResponse<Void>> cancelSubscription() {
         var companyId = resolveCompanyId();
