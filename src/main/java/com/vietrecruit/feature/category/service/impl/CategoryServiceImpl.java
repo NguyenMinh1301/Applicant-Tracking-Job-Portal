@@ -1,10 +1,9 @@
 package com.vietrecruit.feature.category.service.impl;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -77,10 +76,10 @@ public class CategoryServiceImpl implements CategoryService {
     @org.springframework.cache.annotation.Cacheable(
             value = CacheNames.CATEGORY_LIST,
             key = "#companyId")
-    public Page<CategoryResponse> listCategories(UUID companyId, Pageable pageable) {
-        return categoryRepository
-                .findByCompanyId(companyId, pageable)
-                .map(categoryMapper::toResponse);
+    public List<CategoryResponse> listCategories(UUID companyId) {
+        return categoryRepository.findByCompanyIdOrderByNameAsc(companyId).stream()
+                .map(categoryMapper::toResponse)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override

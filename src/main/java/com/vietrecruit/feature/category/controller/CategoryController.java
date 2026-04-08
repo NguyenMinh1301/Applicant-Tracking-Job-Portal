@@ -5,7 +5,7 @@ import java.util.UUID;
 import jakarta.validation.Valid;
 
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -26,6 +26,7 @@ import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.common.base.BaseController;
 import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.response.ApiResponse;
+import com.vietrecruit.common.response.PageResponse;
 import com.vietrecruit.common.security.SecurityUtils;
 import com.vietrecruit.feature.category.dto.request.CategoryRequest;
 import com.vietrecruit.feature.category.dto.response.CategoryResponse;
@@ -71,7 +72,7 @@ public class CategoryController extends BaseController {
         @Parameter(name = "sort", description = "Sort field and direction", example = "name,asc")
     })
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<CategoryResponse>>> list(
+    public ResponseEntity<ApiResponse<PageResponse<CategoryResponse>>> list(
             @ParameterObject
                     @PageableDefault(
                             page = 0,
@@ -80,10 +81,16 @@ public class CategoryController extends BaseController {
                             direction = Sort.Direction.ASC)
                     Pageable pageable) {
         var companyId = resolveCompanyId();
+        var all = categoryService.listCategories(companyId);
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), all.size());
+        var page =
+                new PageImpl<>(
+                        start >= all.size() ? java.util.List.of() : all.subList(start, end),
+                        pageable,
+                        all.size());
         return ResponseEntity.ok(
-                ApiResponse.success(
-                        ApiSuccessCode.CATEGORY_LIST_SUCCESS,
-                        categoryService.listCategories(companyId, pageable)));
+                ApiResponse.success(ApiSuccessCode.CATEGORY_LIST_SUCCESS, PageResponse.from(page)));
     }
 
     @Operation(summary = "Get Category")

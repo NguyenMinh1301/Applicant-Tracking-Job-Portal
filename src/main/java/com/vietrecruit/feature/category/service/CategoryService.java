@@ -1,9 +1,7 @@
 package com.vietrecruit.feature.category.service;
 
+import java.util.List;
 import java.util.UUID;
-
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import com.vietrecruit.feature.category.dto.request.CategoryRequest;
 import com.vietrecruit.feature.category.dto.response.CategoryResponse;
@@ -42,13 +40,12 @@ public interface CategoryService {
     CategoryResponse getCategory(UUID companyId, UUID categoryId);
 
     /**
-     * Returns a paginated list of all categories for the given company.
+     * Returns all categories for the given company, ordered by name ascending.
      *
      * @param companyId the owning company's UUID
-     * @param pageable pagination and sort parameters
-     * @return page of category responses
+     * @return list of category responses
      */
-    Page<CategoryResponse> listCategories(UUID companyId, Pageable pageable);
+    List<CategoryResponse> listCategories(UUID companyId);
 
     /**
      * Deletes a category owned by the given company.
