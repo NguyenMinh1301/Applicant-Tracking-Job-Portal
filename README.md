@@ -3,8 +3,6 @@
     <a href="https://www.postgresql.org/" target="_blank"><img src="assets/img/postgresql.svg" height="90" alt="PostgreSQL" /></a>&nbsp;
     <a href="https://redis.io/" target="_blank"><img src="assets/img/redis.svg" height="90" alt="Redis" /></a>&nbsp;
     <a href="https://www.elastic.co/" target="_blank"><img src="assets/img/elastic.svg" height="90" alt="Elasticsearch" /></a>&nbsp;
-    <br/>
-    <br/>
     <a href="https://kafka.apache.org/" target="_blank"><img src="assets/img/kafka.svg" height="90" alt="Kafka" /></a>&nbsp;
     <a href="https://debezium.io/" target="_blank"><img src="assets/img/debeziumio.svg" height="90" alt="Debezium" /></a>&nbsp;
     <a href="https://www.docker.com/" target="_blank"><img src="assets/img/docker.svg" height="90" alt="Docker" /></a>&nbsp;
@@ -13,7 +11,7 @@
 
 # Applicant tracking job portal — Backend
 
-Backend service for VietRecruit, Applicant Tracking System and job portal.
+Backend service for VietRecruit, Applicant Tracking System, and job portal.
 
 ## Overview
 
