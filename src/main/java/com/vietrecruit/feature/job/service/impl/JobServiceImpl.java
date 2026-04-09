@@ -15,12 +15,15 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.vietrecruit.common.config.cache.CacheEventPublisher;
 import com.vietrecruit.common.config.cache.CacheNames;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.ai.shared.event.JobPublishedEvent;
+import com.vietrecruit.feature.ai.shared.service.EmbeddingService;
 import com.vietrecruit.feature.department.repository.DepartmentRepository;
 import com.vietrecruit.feature.job.dto.request.JobCreateRequest;
 import com.vietrecruit.feature.job.dto.request.JobUpdateRequest;
@@ -47,6 +50,7 @@ public class JobServiceImpl implements JobService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final CacheEventPublisher cacheEventPublisher;
     private final DepartmentRepository departmentRepository;
+    private final EmbeddingService embeddingService;
 
     @Override
     @Transactional
@@ -66,7 +70,14 @@ public class JobServiceImpl implements JobService {
         job.setCreatedBy(createdBy);
         job.setStatus(JobStatus.DRAFT);
         var saved = jobRepository.save(job);
-        cacheEventPublisher.publish("job", "created", saved.getId(), companyId);
+        final UUID savedId = saved.getId();
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        cacheEventPublisher.publish("job", "created", savedId, companyId);
+                    }
+                });
         return saved;
     }
 
@@ -81,7 +92,14 @@ public class JobServiceImpl implements JobService {
 
         jobMapper.updateEntity(request, job);
         var saved = jobRepository.save(job);
-        cacheEventPublisher.publish("job", "updated", saved.getId(), companyId);
+        final UUID savedId = saved.getId();
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        cacheEventPublisher.publish("job", "updated", savedId, companyId);
+                    }
+                });
         return saved;
     }
 
@@ -107,7 +125,14 @@ public class JobServiceImpl implements JobService {
                     ApiErrorCode.CONFLICT, "Job was modified concurrently. Please retry.");
         }
         log.info("Published job id={} company={}", jobId, companyId);
-        cacheEventPublisher.publish("job", "published", saved.getId(), companyId);
+        final UUID savedPublishedId = saved.getId();
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        cacheEventPublisher.publish("job", "published", savedPublishedId, companyId);
+                    }
+                });
         try {
             JobPublishedEvent event =
                     new JobPublishedEvent(saved.getId(), saved.getCompanyId(), saved.getTitle());
@@ -150,7 +175,27 @@ public class JobServiceImpl implements JobService {
         quotaGuard.decrementActiveJobs(companyId);
 
         log.info("Closed job id={} company={}", jobId, companyId);
-        cacheEventPublisher.publish("job", "closed", saved.getId(), companyId);
+
+        // Both cache invalidation and embedding removal run after-commit:
+        // decouples DB persistence from Kafka availability — a broker hiccup
+        // no longer rolls back the close transaction.
+        final UUID closedJobId = saved.getId();
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        cacheEventPublisher.publish("job", "closed", closedJobId, companyId);
+                        try {
+                            embeddingService.deleteByMetadata("jobId", closedJobId.toString());
+                        } catch (Exception e) {
+                            log.warn(
+                                    "Failed to remove job embedding from vector store:"
+                                            + " jobId={}",
+                                    closedJobId,
+                                    e);
+                        }
+                    }
+                });
         return saved;
     }
 
@@ -289,6 +334,12 @@ public class JobServiceImpl implements JobService {
         var job = findJobByIdAndCompany(companyId, jobId);
         job.setDescription(description);
         jobRepository.save(job);
-        cacheEventPublisher.publish("job", "updated", jobId, companyId);
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        cacheEventPublisher.publish("job", "updated", jobId, companyId);
+                    }
+                });
     }
 }

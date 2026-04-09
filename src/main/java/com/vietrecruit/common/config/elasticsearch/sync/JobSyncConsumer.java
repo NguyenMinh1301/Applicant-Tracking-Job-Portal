@@ -156,7 +156,7 @@ public class JobSyncConsumer {
                         .isHot(extractBoolean(payload, "is_hot"))
                         .isFeatured(extractBoolean(payload, "is_featured"))
                         .publishedAt(extractInstant(payload, "published_at"))
-                        .deadline(extractString(payload, "deadline"))
+                        .deadline(extractDate(payload, "deadline"))
                         .publicLink(extractString(payload, "public_link"))
                         .createdAt(extractInstant(payload, "created_at"))
                         .updatedAt(extractInstant(payload, "updated_at"))
@@ -215,6 +215,34 @@ public class JobSyncConsumer {
                         id,
                         key -> locationRepository.findById(key).map(l -> l.getName()).orElse(""));
         return val != null && !val.isEmpty() ? val : null;
+    }
+
+    /**
+     * Converts a Debezium-encoded date value to an ISO-8601 date string. With {@code
+     * time.precision.mode=connect}, Debezium encodes {@code LocalDate} as the number of days since
+     * the Unix epoch (1970-01-01). Handles both integer epoch-day form and pre-formatted ISO
+     * strings.
+     */
+    private String extractDate(Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        if (val == null) return null;
+        if (val instanceof Number n) {
+            try {
+                return java.time.LocalDate.ofEpochDay(n.longValue()).toString();
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        if (val instanceof String s) {
+            // Already ISO format ("2026-05-01") or numeric string
+            try {
+                long days = Long.parseLong(s);
+                return java.time.LocalDate.ofEpochDay(days).toString();
+            } catch (NumberFormatException e) {
+                return s; // already ISO date string
+            }
+        }
+        return null;
     }
 
     private String extractString(Map<String, Object> map, String key) {

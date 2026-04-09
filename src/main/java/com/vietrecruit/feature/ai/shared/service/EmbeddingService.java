@@ -42,6 +42,10 @@ public class EmbeddingService {
 
     @CircuitBreaker(name = "openaiApi", fallbackMethod = "embedAndStoreFallback")
     public void embedAndStore(String id, String content, Map<String, Object> metadata) {
+        if (content == null || content.isBlank()) {
+            log.warn("embedAndStore skipped: content is empty for id={}", id);
+            return;
+        }
         // PgVectorStore maps its id column to PostgreSQL uuid — derive a deterministic UUID from
         // the
         // logical key so the prefixed string (e.g. "cv-<uuid>") does not violate the column type
@@ -82,6 +86,13 @@ public class EmbeddingService {
         return vectorStore.similaritySearch(request);
     }
 
+    /**
+     * Sentinel query used when searching purely by metadata filter. PgVectorStore requires a
+     * non-empty query string even when we only care about the filter expression. The actual token
+     * has no semantic meaning here — documents are selected exclusively by the metadata predicate.
+     */
+    private static final String METADATA_FILTER_SENTINEL = "_";
+
     public void deleteByMetadata(String key, String value) {
         Filter.Expression filter =
                 new Filter.Expression(
@@ -89,7 +100,7 @@ public class EmbeddingService {
         int offset = 0;
         int deleted = 0;
         while (true) {
-            List<Document> batch = search("", DELETE_BATCH_SIZE, filter);
+            List<Document> batch = search(METADATA_FILTER_SENTINEL, DELETE_BATCH_SIZE, filter);
             if (batch.isEmpty()) break;
             List<String> ids = batch.stream().map(Document::getId).toList();
             vectorStore.delete(ids);

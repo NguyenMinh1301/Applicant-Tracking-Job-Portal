@@ -32,6 +32,7 @@ import com.vietrecruit.feature.company.repository.CompanyRepository;
 import com.vietrecruit.feature.job.document.JobDocument;
 import com.vietrecruit.feature.job.entity.Job;
 import com.vietrecruit.feature.job.repository.JobRepository;
+import com.vietrecruit.feature.job.repository.JobSpecification;
 import com.vietrecruit.feature.location.repository.LocationRepository;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
@@ -132,14 +133,16 @@ public class ElasticsearchDataBootstrap implements ApplicationListener<Applicati
                 locationRepository.findAll().stream()
                         .collect(Collectors.toMap(l -> l.getId(), l -> l.getName()));
 
-        long totalJobs = jobRepository.count();
+        long totalJobs = jobRepository.count(JobSpecification.isPublished());
         int totalPages = (int) Math.ceil((double) totalJobs / PAGE_SIZE);
         long totalIndexed = 0;
         List<Integer> failedPages = new ArrayList<>();
 
         for (int pageNum = 0; pageNum < totalPages; pageNum++) {
             try {
-                Page<Job> page = jobRepository.findAll(PageRequest.of(pageNum, PAGE_SIZE));
+                Page<Job> page =
+                        jobRepository.findAll(
+                                JobSpecification.isPublished(), PageRequest.of(pageNum, PAGE_SIZE));
                 if (!page.hasContent()) {
                     break;
                 }
@@ -221,8 +224,12 @@ public class ElasticsearchDataBootstrap implements ApplicationListener<Applicati
             return;
         }
 
+        // Only index non-deleted candidates — soft-deleted rows must not enter ES.
+        org.springframework.data.jpa.domain.Specification<Candidate> activeSpec =
+                (root, query, cb) -> cb.isNull(root.get("deletedAt"));
+
         Instant start = Instant.now();
-        long totalCandidates = candidateRepository.count();
+        long totalCandidates = candidateRepository.count(activeSpec);
         int totalPages = (int) Math.ceil((double) totalCandidates / PAGE_SIZE);
         long totalIndexed = 0;
         List<Integer> failedPages = new ArrayList<>();
@@ -230,7 +237,7 @@ public class ElasticsearchDataBootstrap implements ApplicationListener<Applicati
         for (int pageNum = 0; pageNum < totalPages; pageNum++) {
             try {
                 Page<Candidate> page =
-                        candidateRepository.findAll(PageRequest.of(pageNum, PAGE_SIZE));
+                        candidateRepository.findAll(activeSpec, PageRequest.of(pageNum, PAGE_SIZE));
                 if (!page.hasContent()) {
                     break;
                 }

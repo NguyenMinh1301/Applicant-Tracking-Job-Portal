@@ -63,8 +63,39 @@ public class ElasticsearchIndexInitializer {
     @EventListener(ApplicationReadyEvent.class)
     public void initializeIndices() {
         createIndexIfNotExists(INDEX_JOBS, this::buildJobsMappings);
+        migrateJobsIndexIfMappingOutdated();
         createIndexIfNotExists(INDEX_CANDIDATES, this::buildCandidatesMappings);
         createIndexIfNotExists(INDEX_COMPANIES, this::buildCompaniesMappings);
+    }
+
+    private void migrateJobsIndexIfMappingOutdated() {
+        try {
+            var response = esClient.indices().getMapping(m -> m.index(INDEX_JOBS));
+            var indexMeta = response.get(INDEX_JOBS);
+            if (indexMeta == null) return;
+
+            var properties = indexMeta.mappings().properties();
+            var titleProp = properties.get("title");
+            // completion sub-field cannot be added via PUT _mapping under dynamic:strict —
+            // drop and recreate so ElasticsearchDataBootstrap repopulates from the DB
+            boolean hasSuggest =
+                    titleProp != null
+                            && titleProp.isText()
+                            && titleProp.text().fields().containsKey("suggest");
+
+            if (!hasSuggest) {
+                log.warn(
+                        "ES index [{}] mapping is outdated (missing title.suggest completion field)"
+                                + " — dropping for recreation",
+                        INDEX_JOBS);
+                esClient.indices().delete(d -> d.index(INDEX_JOBS));
+                createIndexIfNotExists(INDEX_JOBS, this::buildJobsMappings);
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Failed to validate ES index mapping [" + INDEX_JOBS + "]: " + e.getMessage(),
+                    e);
+        }
     }
 
     private void createIndexIfNotExists(String indexName, MappingBuilder mappingBuilder) {
