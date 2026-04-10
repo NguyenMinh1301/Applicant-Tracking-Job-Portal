@@ -17,11 +17,13 @@ import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.common.base.BaseController;
 import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.response.ApiResponse;
+import com.vietrecruit.common.response.PageResponse;
 import com.vietrecruit.common.response.SearchPageResponse;
 import com.vietrecruit.common.security.SecurityUtils;
 import com.vietrecruit.feature.company.dto.request.CompanyCreateRequest;
 import com.vietrecruit.feature.company.dto.request.CompanySearchRequest;
 import com.vietrecruit.feature.company.dto.request.CompanyUpdateRequest;
+import com.vietrecruit.feature.company.dto.response.CompanyMemberResponse;
 import com.vietrecruit.feature.company.dto.response.CompanyResponse;
 import com.vietrecruit.feature.company.dto.response.CompanySearchResponse;
 import com.vietrecruit.feature.company.service.CompanySearchService;
@@ -99,5 +101,23 @@ public class CompanyController extends BaseController {
                 ApiResponse.success(
                         ApiSuccessCode.COMPANY_UPDATE_SUCCESS,
                         companyService.updateCompany(companyId, request)));
+    }
+
+    @Operation(
+            summary = "Get Company Members",
+            description =
+                    "Returns a paginated list of all users belonging to the authenticated user's"
+                            + " company. Only accessible by COMPANY_ADMIN and HR roles.")
+    @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @GetMapping(ApiConstants.Company.ME_MEMBERS)
+    public ResponseEntity<ApiResponse<PageResponse<CompanyMemberResponse>>> getCompanyMembers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        ApiSuccessCode.USER_LIST_SUCCESS,
+                        companyService.getCompanyMembers(page, size, role, search)));
     }
 }

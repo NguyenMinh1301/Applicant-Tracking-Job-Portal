@@ -114,6 +114,7 @@ public final class ApiConstants {
         public static final String ROOT = API_VERSION + "/companies";
         public static final String CREATE = "";
         public static final String ME = "/me";
+        public static final String ME_MEMBERS = "/me/members";
         public static final String SEARCH = "/search";
     }
 
