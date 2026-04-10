@@ -34,24 +34,24 @@ resilience4j:
 
       # OpenAPI
       swagger:
-        limitForPeriod: 50
+        limitForPeriod: 100
         limitRefreshPeriod: 60s
         timeoutDuration: 5s
         registerHealthIndicator: true
 
       # Base
       lowTraffic:
-        limitForPeriod: 5
-        limitRefreshPeriod: 30s
-        timeoutDuration: 5s
-        registerHealthIndicator: true
-      mediumTraffic:
         limitForPeriod: 15
         limitRefreshPeriod: 30s
         timeoutDuration: 5s
         registerHealthIndicator: true
+      mediumTraffic:
+        limitForPeriod: 45
+        limitRefreshPeriod: 30s
+        timeoutDuration: 5s
+        registerHealthIndicator: true
       highTraffic:
-        limitForPeriod: 25
+        limitForPeriod: 75
         limitRefreshPeriod: 30s
         timeoutDuration: 5s
         registerHealthIndicator: true
@@ -72,7 +72,7 @@ resilience4j:
 
       # Admin endpoints
       adminGeneral:
-        limitForPeriod: 30
+        limitForPeriod: 60
         limitRefreshPeriod: 1m
         timeoutDuration: 0
         registerHealthIndicator: true
