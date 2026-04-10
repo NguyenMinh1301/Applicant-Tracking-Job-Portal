@@ -22,6 +22,8 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<PaymentTransaction> findByOrderCode(Long orderCode);
 
+    boolean existsByOrderCode(Long orderCode);
+
     List<PaymentTransaction> findByCompanyIdAndStatus(UUID companyId, PaymentStatus status);
 
     /**

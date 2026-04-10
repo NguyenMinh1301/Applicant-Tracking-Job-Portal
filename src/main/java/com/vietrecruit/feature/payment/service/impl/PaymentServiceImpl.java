@@ -25,6 +25,7 @@ import com.vietrecruit.feature.payment.repository.PaymentTransactionRepository;
 import com.vietrecruit.feature.payment.repository.TransactionRecordRepository;
 import com.vietrecruit.feature.payment.service.PaymentService;
 import com.vietrecruit.feature.payment.service.WebhookSignatureVerifier;
+import com.vietrecruit.feature.subscription.entity.SubscriptionPlan;
 import com.vietrecruit.feature.subscription.enums.SubscriptionStatus;
 import com.vietrecruit.feature.subscription.repository.EmployerSubscriptionRepository;
 import com.vietrecruit.feature.subscription.repository.SubscriptionPlanRepository;
@@ -100,11 +101,15 @@ public class PaymentServiceImpl implements PaymentService {
                         .filter(p -> Boolean.TRUE.equals(p.getIsActive()))
                         .orElseThrow(() -> new ApiException(ApiErrorCode.PLAN_NOT_FOUND));
 
-        // Block if company already has an active subscription
+        // Block if company already has an active subscription — guard BEFORE circuit
+        // breaker
         subscriptionRepository
                 .findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE)
                 .ifPresent(
                         existing -> {
+                            log.warn(
+                                    "Checkout rejected: company={} already has active subscription",
+                                    companyId);
                             throw new ApiException(ApiErrorCode.SUBSCRIPTION_ALREADY_ACTIVE);
                         });
 
@@ -135,13 +140,17 @@ public class PaymentServiceImpl implements PaymentService {
                     companyId);
         }
 
-        // Generate unique order code: 13-digit epoch ms + 6-digit cryptographic random suffix.
-        // SecureRandom provides 20 bits of entropy per code (1_000_000 possibilities per ms),
-        // eliminating the 2-digit ThreadLocalRandom window that allowed collision under load.
-        Long orderCode =
-                Long.parseLong(
-                        System.currentTimeMillis()
-                                + String.format("%06d", SECURE_RANDOM.nextInt(1_000_000)));
+        return createPaymentLinkWithRetry(companyId, plan, cycle, amount);
+    }
+
+    @Retry(name = "payosPayment", fallbackMethod = "checkoutFallback")
+    @CircuitBreaker(name = "payosPayment", fallbackMethod = "checkoutFallback")
+    private CheckoutResponse createPaymentLinkWithRetry(
+            UUID companyId, SubscriptionPlan plan, BillingCycle cycle, long amount) {
+        // Generate safe orderCode: epoch ms * 1000 + 3-digit random suffix
+        // Max value: 9_999_999_999_999_999 < 9_007_199_254_740_991 (JS
+        // MAX_SAFE_INTEGER)
+        long orderCode = generateSafeOrderCode();
 
         // Build PayOS payment link request
         String description = "VietRecruit " + plan.getName() + " - " + cycle.name();
@@ -152,7 +161,8 @@ public class PaymentServiceImpl implements PaymentService {
 
         try {
             // Persist the transaction BEFORE calling PayOS.
-            // If DB write fails the PayOS API is never called, preventing orphaned payment links.
+            // If DB write fails the PayOS API is never called, preventing orphaned payment
+            // links.
             // If PayOS call fails, @Transactional rolls back the DB record automatically.
             PaymentTransaction transaction =
                     PaymentTransaction.builder()
@@ -207,6 +217,35 @@ public class PaymentServiceImpl implements PaymentService {
                     ApiErrorCode.PAYMENT_CREATION_FAILED,
                     "Failed to create payment link: " + e.getMessage());
         }
+    }
+
+    /**
+     * Generates a PayOS-safe orderCode within JavaScript MAX_SAFE_INTEGER range [1,
+     * 9007199254740991].
+     *
+     * <p>Strategy: epoch milliseconds * 1000 + 3-digit random suffix. Max value: ~9.9e15, well
+     * within JS safe integer range.
+     *
+     * @return unique orderCode guaranteed to be within PayOS constraints
+     */
+    private long generateSafeOrderCode() {
+        long epochMs = System.currentTimeMillis();
+        int suffix = SECURE_RANDOM.nextInt(100, 1000);
+        long orderCode = epochMs * 1000L + suffix;
+
+        // Verify collision-free (max 3 retries)
+        for (int attempt = 0; attempt < 3; attempt++) {
+            if (!paymentTransactionRepository.existsByOrderCode(orderCode)) {
+                return orderCode;
+            }
+            log.warn("OrderCode collision detected: {}, retrying (attempt {})", orderCode, attempt);
+            suffix = SECURE_RANDOM.nextInt(100, 1000);
+            orderCode = epochMs * 1000L + suffix;
+        }
+
+        throw new ApiException(
+                ApiErrorCode.INTERNAL_ERROR,
+                "Failed to generate unique orderCode after 3 attempts");
     }
 
     /**
