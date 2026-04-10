@@ -11,6 +11,9 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.vietrecruit.common.util.LenientInstantDeserializer;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -30,6 +33,7 @@ public class InterviewCreateRequest {
 
     @NotNull(message = "Scheduled time is required")
     @Future(message = "Scheduled time must be in the future")
+    @JsonDeserialize(using = LenientInstantDeserializer.class)
     private Instant scheduledAt;
 
     @Min(value = 1, message = "Duration must be at least 1 minute")
