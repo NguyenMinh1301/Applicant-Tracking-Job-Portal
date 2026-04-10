@@ -130,7 +130,8 @@ public class JobServiceImpl implements JobService {
                 new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        cacheEventPublisher.publish("job", "published", savedPublishedId, companyId);
+                        cacheEventPublisher.publish(
+                                "job", "published", savedPublishedId, companyId);
                     }
                 });
         try {
