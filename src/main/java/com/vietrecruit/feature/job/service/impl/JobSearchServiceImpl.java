@@ -30,7 +30,6 @@ import co.elastic.clients.elasticsearch._types.query_dsl.FunctionScoreMode;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
-import co.elastic.clients.elasticsearch.core.search.CompletionSuggestOption;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -112,41 +111,39 @@ public class JobSearchServiceImpl implements JobSearchService {
                     esClient.search(
                             s ->
                                     s.index(INDEX_JOBS)
-                                            .suggest(
-                                                    sg ->
-                                                            sg.suggesters(
-                                                                    "title-suggest",
-                                                                    fs ->
-                                                                            fs.prefix(query)
-                                                                                    .completion(
-                                                                                            cs ->
-                                                                                                    cs.field(
-                                                                                                                    "title.suggest")
-                                                                                                            .size(
-                                                                                                                    limit)
-                                                                                                            .skipDuplicates(
-                                                                                                                    true)
-                                                                                                            .fuzzy(
-                                                                                                                    fz ->
-                                                                                                                            fz
-                                                                                                                                    .fuzziness(
-                                                                                                                                            "AUTO")))))
-                                            .source(sc -> sc.fetch(false))
-                                            .size(0),
+                                            .query(
+                                                    q ->
+                                                            q.bool(
+                                                                    b ->
+                                                                            b.must(
+                                                                                            m ->
+                                                                                                    m
+                                                                                                            .matchPhrasePrefix(
+                                                                                                                    mp ->
+                                                                                                                            mp.field(
+                                                                                                                                            "title")
+                                                                                                                                    .query(
+                                                                                                                                            query)))
+                                                                                    .filter(
+                                                                                            f ->
+                                                                                                    f
+                                                                                                            .term(
+                                                                                                                    t ->
+                                                                                                                            t.field(
+                                                                                                                                            "status")
+                                                                                                                                    .value(
+                                                                                                                                            FieldValue
+                                                                                                                                                    .of(
+                                                                                                                                                            "PUBLISHED"))))))
+                                            .collapse(c -> c.field("title.keyword"))
+                                            .source(sc -> sc.filter(sf -> sf.includes("title")))
+                                            .size(limit),
                             JobDocument.class);
 
-            var suggestions = response.suggest().get("title-suggest");
-            if (suggestions == null || suggestions.isEmpty()) {
-                return List.of();
-            }
-
-            return suggestions.stream()
-                    .flatMap(
-                            s ->
-                                    s.completion().options().stream()
-                                            .map(CompletionSuggestOption::text))
-                    .distinct()
-                    .limit(limit)
+            return response.hits().hits().stream()
+                    .map(Hit::source)
+                    .filter(doc -> doc != null && doc.getTitle() != null)
+                    .map(JobDocument::getTitle)
                     .collect(Collectors.toList());
         } catch (IOException e) {
             log.error("Job autocomplete failed: {}", e.getMessage(), e);
